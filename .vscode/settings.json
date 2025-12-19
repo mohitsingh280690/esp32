@@ -1,0 +1,8 @@
+{
+    "C_Cpp.default.configurationProvider": "platformio.platformio-ide",
+    "files.associations": {
+        "*.h": "c",
+        "*.c": "c",
+        "*.cpp": "cpp"
+    }
+}

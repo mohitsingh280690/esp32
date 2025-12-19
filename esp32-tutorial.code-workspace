@@ -1,0 +1,10 @@
+{
+    "folders": [
+        {
+            "path": "project-template"
+        }
+    ],
+    "settings": {
+        "C_Cpp.default.configurationProvider": "platformio.platformio-ide"
+    }
+}
