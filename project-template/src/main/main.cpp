@@ -55,10 +55,43 @@
 #include "esp_log.h"
 
 static const char *TAG = "BlinkTask";
+#define LED1 GPIO_NUM_2
+#define LED2 GPIO_NUM_2
+#define LED3 GPIO_NUM_2
 
-// TODO: Define your struct here using typedef
-// Include: gpio_num_t pin, int delay_ms, const char* name
+typedef struct
+{
+    int delay_ms;
+    gpio_num_t pinNumber;
+    const char *name;
+} blinkConfig_t;
 
+blinkConfig_t config1 = {200, LED1, "FastLED"};
+blinkConfig_t config2 = {500, LED2, "MediumLED"};
+blinkConfig_t config3 = {1000, LED3, "SlowLED"};
+
+void blinkTask(void *pvParameter)
+{
+    blinkConfig_t *blinkConfig = (blinkConfig_t *)pvParameter;
+
+    int delay = blinkConfig->delay_ms;
+    gpio_num_t pinNumber = blinkConfig->pinNumber;
+    const char *TAG = blinkConfig->name;
+    gpio_reset_pin(pinNumber);
+    gpio_set_direction(pinNumber, GPIO_MODE_OUTPUT);
+
+    ESP_LOGI(TAG, "Entering task with delay %d", delay);
+
+    while (1)
+    {
+        gpio_set_level(pinNumber, 1);
+        vTaskDelay(pdMS_TO_TICKS(delay));
+        gpio_set_level(pinNumber, 0);
+        vTaskDelay(pdMS_TO_TICKS(delay));
+            ESP_LOGI(TAG, "Task with delay %d", delay);
+
+    }
+}
 
 // TODO: Create blink task that accepts struct pointer
 // Cast pvParameter to your struct type
@@ -66,7 +99,6 @@ static const char *TAG = "BlinkTask";
 // Initialize GPIO using the pin from struct
 // Use delay from struct
 // Log using name from struct
-
 
 extern "C" void app_main(void)
 {
@@ -76,15 +108,8 @@ extern "C" void app_main(void)
     ESP_LOGI(TAG, "Day 2 - Exercise 3: Struct Parameters");
     ESP_LOGI(TAG, "=================================");
 
-    // TODO: Create 3 struct instances with different configs
-    // CRITICAL: Use 'static' keyword to ensure they persist!
-    // Example configs:
-    // - LED1: GPIO_NUM_2, 200ms, "FastLED"
-    // - LED2: GPIO_NUM_2, 500ms, "MediumLED"  
-    // - LED3: GPIO_NUM_2, 1000ms, "SlowLED"
-
-    // TODO: Create 3 tasks, pass address of each struct
-    // Hint: &config1, &config2, &config3
-
+    xTaskCreate(&blinkTask, "Blink1", 2048, (void *)&config1, 5, NULL);
+    xTaskCreate(&blinkTask, "Blink2", 2048, (void *)&config2, 5, NULL);
+    xTaskCreate(&blinkTask, "Blink3", 2048, (void *)&config3, 5, NULL);
     ESP_LOGI(TAG, "All tasks created. Watch the different blink rates!");
 }
