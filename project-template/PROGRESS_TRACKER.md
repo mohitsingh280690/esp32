@@ -28,8 +28,8 @@
 ## Current Status
 
 **Current Week:** Week 1  
-**Current Day:** Day 2  
-**Current Challenge:** Day 2, Exercise 2 (Task Parameters) - COMPLETED!
+**Current Day:** Day 3  
+**Current Challenge:** Day 3, Exercise 1 (Priority Demonstration) - IN PROGRESS
 **Overall Progress:** 2/28 days (7%)
 
 ---
@@ -41,11 +41,13 @@
   - ✅ Setup Verification: LED Blink
   - ✅ Exercise 3: ESP Logging Levels (4 log levels, counter, modulo operator)
   - **Key Learnings:** extern "C" linkage, vTaskDelay() requirement, watchdog timers, log level semantics
-- 🔄 Day 2: FreeRTOS Tasks Basics (IN PROGRESS)
+- ✅ Day 2: FreeRTOS Tasks Basics (COMPLETED)
   - ✅ Exercise 1: Two Talking Tasks (concurrent execution, function pointers)
   - ✅ Exercise 2: Task with Parameters (void* casting, passing data)
-  - ⬜ Exercise 3: Three LEDs at Different Rates
-- ⬜ Day 3: Task Scheduling & Priorities
+  - ✅ Exercise 3: Struct Parameters (grouping related data, arrow operator, race conditions)
+- 🔄 Day 3: Task Scheduling & Priorities (IN PROGRESS)
+  - ⬜ Exercise 1: Priority Demonstration
+  - ⬜ Exercise 2: Dynamic Priority Change
 - ⬜ Day 4: Inter-Task Communication (Queues)
 - ⬜ Day 5: Semaphores & Mutexes
 - ⬜ Day 6-7: Practice Project: Multi-Task LED Controller
