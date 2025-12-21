@@ -1,79 +1,90 @@
 /**
- * Day 2 - Exercise 1: Two Talking Tasks
+ * Day 2 - Exercise 3: Passing Multiple Parameters with Structs
  *
- * CHALLENGE: Create 2 concurrent tasks that print messages at different intervals
+ * CHALLENGE: Pass BOTH pin number AND delay to a generic blink task
+ * Since you have only one LED, we'll simulate multiple by logging different names
+ * This teaches you struct usage - critical for passing complex data to tasks
  *
  * REQUIREMENTS:
- * ✅ Task 1 prints "Hello from Task 1" every 1 second
- * ✅ Task 2 prints "Hello from Task 2" every 2 seconds
- * ✅ Both tasks run simultaneously (you'll see interleaved output)
- * ✅ Both tasks use proper infinite loops with vTaskDelay()
- * ✅ Each task has its own TAG for logging
+ * ✅ Define a struct to hold pin and delay_ms
+ * ✅ Use typedef for cleaner syntax
+ * ✅ Create 3 task instances with different configurations
+ * ✅ Properly manage struct memory lifetime (static or heap)
+ * ✅ Access struct members using -> operator
+ * ✅ Clean, reusable code
  *
- * FUNCTIONS TO USE:
- * - xTaskCreate() - Create and start a task
- * - ESP_LOGI() - Log messages
- * - vTaskDelay() - Delay in milliseconds
+ * FUNCTIONS YOU'LL NEED:
+ * - gpio_reset_pin()
+ * - gpio_set_direction()
+ * - gpio_set_level()
+ * - xTaskCreate() - pass struct pointer as parameter!
  *
- * C CONCEPTS YOU'LL LEARN:
- * - Function pointers: Why &task_function?
- * - Multiple instances of task creation
- * - Task naming and identification
- * - Concurrent execution (tasks don't wait for each other)
+ * C CONCEPTS IN THIS EXERCISE:
+ * - struct: Grouping related data under one type
+ * - typedef: Creating type aliases (blink_config_t)
+ * - Arrow operator: config->pin vs config.pin (pointer vs value)
+ * - Memory allocation: static vs stack vs heap
+ * - Pointer to struct: Passing address of struct
+ * - Member access: How to get data from struct pointer
  *
  * CRITICAL THINKING:
- * - What happens when Task 1 calls vTaskDelay()? Does Task 2 stop?
- * - Why do we pass &task1 instead of task1() to xTaskCreate()?
- * - What is pvParameter and when would you use it?
+ * - Why pass struct POINTER instead of copying the whole struct?
+ * - Where should you allocate the structs? (Stack of app_main? Static? Heap?)
+ * - What happens if app_main's stack structs are destroyed before task reads them?
+ * - How does the size of the struct affect your decision?
+ * - When would you use malloc() for struct allocation?
  *
- * EXPECTED OUTPUT:
- * I (1000) Task1: Hello from Task 1
- * I (2000) Task2: Hello from Task 2
- * I (2000) Task1: Hello from Task 1
- * I (3000) Task1: Hello from Task 1
- * I (4000) Task2: Hello from Task 2
- * I (4000) Task1: Hello from Task 1
+ * EXPECTED BEHAVIOR:
+ * - LED blinks (you have GPIO 2)
+ * - Three "virtual" LEDs via logging (LED1, LED2, LED3)
+ * - Each logs at different intervals (200ms, 500ms, 1000ms)
+ * - All run simultaneously
+ *
+ * STRUCT TEMPLATE (don't copy, understand!):
+ * typedef struct {
+ *     gpio_num_t pin;
+ *     int delay_ms;
+ *     const char* name;
+ * } blink_config_t;
  */
 
 #include <stdio.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include "driver/gpio.h"
 #include "esp_log.h"
 
-const char *TAG1 = "Task1";
-const char *TAG2 = "Task2";
-// TODO: Create task1 function
-// Signature: void task1(void *pvParameter)
-// Inside: infinite loop that prints message and delays 1 second
-void task1(void *pvParameter)
-{
-    while (1)
-    {
-        ESP_LOGI(TAG1, "inside TASK1");
-        vTaskDelay(1000 / portTICK_PERIOD_MS);
-    }
-}
-void task2(void *pvParameter)
-{
-    while (1)
-    {
-        ESP_LOGI(TAG2, "inside TASK2");
-        vTaskDelay(2000 / portTICK_PERIOD_MS);
-    }
-}
+static const char *TAG = "BlinkTask";
+
+// TODO: Define your struct here using typedef
+// Include: gpio_num_t pin, int delay_ms, const char* name
+
+
+// TODO: Create blink task that accepts struct pointer
+// Cast pvParameter to your struct type
+// Access members using -> operator
+// Initialize GPIO using the pin from struct
+// Use delay from struct
+// Log using name from struct
+
+
 extern "C" void app_main(void)
 {
     esp_log_level_set("*", ESP_LOG_INFO);
 
-    ESP_LOGI("Main", "=================================");
-    ESP_LOGI("Main", "Day 2 - Exercise 1: Two Tasks");
-    ESP_LOGI("Main", "=================================");
+    ESP_LOGI(TAG, "=================================");
+    ESP_LOGI(TAG, "Day 2 - Exercise 3: Struct Parameters");
+    ESP_LOGI(TAG, "=================================");
 
-    // TODO: Create task1 using xTaskCreate()
-    // Parameters: function pointer, name string, stack size, parameters, priority, handle
-    // Example structure: xTaskCreate(&your_function, "name", 2048, NULL, 5, NULL);
-    xTaskCreate(&task1, "TASK1", 2048, NULL, 5, NULL);
-    xTaskCreate(&task2, "TASK2", 2048, NULL, 5, NULL);
+    // TODO: Create 3 struct instances with different configs
+    // CRITICAL: Use 'static' keyword to ensure they persist!
+    // Example configs:
+    // - LED1: GPIO_NUM_2, 200ms, "FastLED"
+    // - LED2: GPIO_NUM_2, 500ms, "MediumLED"  
+    // - LED3: GPIO_NUM_2, 1000ms, "SlowLED"
 
-    ESP_LOGI("Main", "Both tasks created. Watch the interleaved output!");
+    // TODO: Create 3 tasks, pass address of each struct
+    // Hint: &config1, &config2, &config3
+
+    ESP_LOGI(TAG, "All tasks created. Watch the different blink rates!");
 }

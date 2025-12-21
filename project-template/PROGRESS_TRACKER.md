@@ -29,21 +29,21 @@
 
 **Current Week:** Week 1  
 **Current Day:** Day 2  
-**Current Challenge:** Day 2, Exercise 1 (Two Talking Tasks) - COMPLETED!
-**Overall Progress:** 1.5/28 days (5%)
+**Current Challenge:** Day 2, Exercise 2 (Task Parameters) - COMPLETED!
+**Overall Progress:** 2/28 days (7%)
 
 ---
 
 ## Weekly Progress
 
-### 🔵 Week 1: FreeRTOS Fundamentals (1.5/7 days completed)
+### 🔵 Week 1: FreeRTOS Fundamentals (2/7 days completed)
 - ✅ Day 1: ESP-IDF vs Arduino, Build System (COMPLETED)
   - ✅ Setup Verification: LED Blink
   - ✅ Exercise 3: ESP Logging Levels (4 log levels, counter, modulo operator)
   - **Key Learnings:** extern "C" linkage, vTaskDelay() requirement, watchdog timers, log level semantics
 - 🔄 Day 2: FreeRTOS Tasks Basics (IN PROGRESS)
   - ✅ Exercise 1: Two Talking Tasks (concurrent execution, function pointers)
-  - ⬜ Exercise 2: Task with Parameters (void* casting, passing data)
+  - ✅ Exercise 2: Task with Parameters (void* casting, passing data)
   - ⬜ Exercise 3: Three LEDs at Different Rates
 - ⬜ Day 3: Task Scheduling & Priorities
 - ⬜ Day 4: Inter-Task Communication (Queues)
@@ -120,9 +120,9 @@
 ---
 
 #### Day 2: FreeRTOS Tasks Basics (🔄 In Progress)
-**Date:** December 19, 2025  
-**Time Spent:** ~30 minutes so far  
-**Status:** In Progress
+**Date:** December 19-21, 2025  
+**Time Spent:** ~3 hours  
+**Status:** In Progress (2/3 exercises completed)
 
 **What I Learned:**
 - Tasks = Threads (same concept, different terminology)
@@ -131,25 +131,50 @@
 - Equal priority tasks share CPU time (round-robin)
 - `xTaskCreate()` parameters: function pointer, name, stack size, params, priority, handle
 - When task calls vTaskDelay(), scheduler switches to other ready tasks
+- **void* casting:** Two approaches - passing by value `(void*)500` vs passing by address `&variable`
+- **Memory lifetime:** Local variables destroyed when function exits (stack vs static vs heap)
+- **Undefined behavior:** Code that "works by luck" vs code that works by design
+- **Timing guarantees:** Tasks created at high priority run before app_main exits
+- **Race conditions:** Multiple tasks accessing same hardware (LED) causes unpredictable behavior
 
 **Exercises Completed:**
 - [x] Exercise 1: Two Talking Tasks (1s and 2s intervals, concurrent execution)
+- [x] Exercise 2: Task Parameters (void* casting, passing scalar values directly)
 
 **Key Understanding:**
 - Task 1 delaying does NOT block Task 2 (scheduler switches contexts)
 - Same timestamps appear when multiple tasks become ready simultaneously
 - Using `task1()` instead of `&task1` would cause immediate call and crash
+- **Passing by value:** `(void*)500` stores the value IN the pointer variable (no memory indirection)
+- **Passing by address:** `&delay` passes memory location (variable must outlive task's read)
+- **Cast difference:** `(int)pvParameter` vs `*(int*)pvParameter` - value vs dereference
+- **Pointer size = int size on ESP32:** Both 32-bit, enabling the value-passing trick
+- **Synchronization:** `vTaskDelay()` in app_main ensures tasks run and copy data before variables destroyed
+- ESP-IDF's forgiving memory management often hides stack lifetime bugs (dangerous!)
 
 **Challenges Faced:**
-- None so far - concepts building well on Day 1 foundation
+- Initially used pointer dereferencing `*(int*)pvParameter` with address passing
+- Confusion about memory lifetime - when are local variables destroyed?
+- Understanding why undefined behavior doesn't always crash
+- Experimenting with intentionally breaking code (priority changes, no sync)
+- Only one LED available - saw race condition firsthand (both tasks fighting for control)
 
-**Questions for Next Session:**
-- How to pass parameters to tasks? (void* casting)
-- What happens with different priorities?
+**Deep Dive Topics Explored:**
+- Why doesn't the code crash? (Timing, ESP-IDF memory management)
+- When DOES task read happen relative to app_main exit?
+- Attempted to force crash by lowering task priority (didn't crash - memory persists)
+- Learned that "working by luck" vs "working by design" distinction
+- 32-bit pointer size allowing direct value storage in pointer variable
+
+**Questions Answered:**
+- ✅ How to pass parameters to tasks? (void* casting, two methods)
+- ✅ Why do variables persist after app_main exits? (Timing + forgiving memory management)
+- ✅ What's the difference between passing value vs address?
 
 **Notes:**
-- Code works perfectly, minor style improvements noted (static const, formatting)
-- Ready for Exercise 2: Task Parameters
+- Excellent exploration of C memory concepts and embedded timing issues
+- Strong critical thinking demonstrated (challenged assumptions, tested edge cases)
+- Ready for Exercise 3: Passing multiple parameters using structs
 
 ---
 
