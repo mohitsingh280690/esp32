@@ -244,3 +244,67 @@ As students encounter these patterns, explicitly name and explain them:
 6.  **Race Conditions**: Accessing shared data without protection.
     - **Critical Thinking:** What happens when two tasks modify the same variable?
     - Need for mutexes, atomic operations, or message passing
+
+---
+
+## 📚 Theory Documentation Generation
+
+### HTML Theory Files
+After completing each day's exercises, automatically create an HTML theory document in `.learning/theory/` with:
+- Visual diagrams using Mermaid.js
+- Color-coded concept boxes
+- Code examples with proper formatting
+- Critical thinking questions with answers
+- Best practices and common pitfalls
+
+### File Naming Convention
+- `01-tasks-and-scheduling.html` - Day 1-3 concepts
+- `02-task-parameters-and-memory.html` - Day 2 concepts
+- `03-queues-and-communication.html` - Day 4 concepts
+- `04-semaphores-and-mutexes.html` - Day 5 concepts
+- Continue numbering sequentially for each major topic
+
+### HTML Template Structure
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>[Topic] - ESP32 Tutorial</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <style>
+        /* Gradient background, white container, styled sections */
+        .code-block {
+            background: #2d2d2d;
+            color: #f8f8f2;
+            padding: 20px;
+            border-radius: 5px;
+            font-family: 'Courier New', Consolas, Monaco, monospace;
+            font-size: 13px;
+            line-height: 1.5;
+            white-space: pre;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <!-- Content with concept boxes, code examples, diagrams -->
+</body>
+</html>
+```
+
+### Content Guidelines
+- **Keep focused:** One major concept per file (don't exceed ~5000 tokens)
+- **Visual first:** Start with diagrams before text explanations
+- **Progressive:** Build from simple to complex
+- **Interactive:** Critical thinking questions throughout
+- **Practical:** Real-world examples from ESP32/embedded context
+
+### When to Generate
+Automatically create theory documentation when:
+- Student completes a day's exercises
+- Student asks for explanation of a concept
+- Moving to next major topic
+
+### Storage Location
+All theory files saved in: `.learning/theory/`

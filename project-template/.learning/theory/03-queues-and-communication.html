@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FreeRTOS Queues - ESP32 Tutorial</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            padding: 20px;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        header {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        header h1 { font-size: 2.5em; margin-bottom: 10px; }
+        header p { font-size: 1.2em; opacity: 0.9; }
+        .content { padding: 40px; }
+        h2 {
+            color: #4facfe;
+            border-bottom: 3px solid #4facfe;
+            padding-bottom: 10px;
+            margin: 30px 0 20px 0;
+        }
+        h3 { color: #00f2fe; margin: 20px 0 10px 0; }
+        .concept-box {
+            background: #f8f9fa;
+            border-left: 4px solid #4facfe;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+        .code-block {
+            background: #2d2d2d;
+            color: #f8f8f2;
+            padding: 20px;
+            border-radius: 5px;
+            overflow-x: auto;
+            margin: 15px 0;
+            font-family: 'Courier New', Consolas, Monaco, monospace;
+            font-size: 13px;
+            line-height: 1.5;
+            white-space: pre;
+        }
+        .warning {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 5px;
+        }
+        .danger {
+            background: #f8d7da;
+            border-left: 4px solid #dc3545;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 5px;
+        }
+        .success {
+            background: #d4edda;
+            border-left: 4px solid #28a745;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 5px;
+        }
+        .key-point {
+            background: #e3f2fd;
+            border-left: 4px solid #2196f3;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 5px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background: #4facfe;
+            color: white;
+        }
+        tr:hover { background: #f5f5f5; }
+        .mermaid { text-align: center; margin: 30px 0; }
+        .pattern-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 25px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+        .pattern-card h3 { color: white; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📬 FreeRTOS Queues</h1>
+            <p>Thread-Safe Inter-Task Communication</p>
+        </header>
+        
+        <div class="content">
+            <h2>🎯 What Are Queues?</h2>
+            <div class="concept-box">
+                <p><strong>Queue:</strong> A thread-safe FIFO (First-In-First-Out) buffer for passing data between tasks or ISRs.</p>
+                <ul>
+                    <li>Producer task puts data in</li>
+                    <li>Consumer task takes data out</li>
+                    <li>Order preserved (FIFO)</li>
+                    <li>Automatic blocking when full/empty</li>
+                    <li>Built-in thread safety (no mutexes needed)</li>
+                </ul>
+            </div>
+
+            <h3>Visual Representation</h3>
+            <div class="mermaid">
+                graph LR
+                    P[Producer Task] -->|xQueueSend| Q[Queue: 5 items]
+                    Q -->|xQueueReceive| C[Consumer Task]
+                    
+                    style P fill:#90ee90
+                    style C fill:#87ceeb
+                    style Q fill:#ffd700
+            </div>
+
+            <h2>🔧 Queue API Basics</h2>
+            
+            <h3>Creating a Queue</h3>
+            <div class="code-block">
+QueueHandle_t xQueueCreate(
+    UBaseType_t uxQueueLength,    // Max items queue can hold
+    UBaseType_t uxItemSize         // Size of each item in bytes
+);
+
+// Example: Queue for 10 integers
+QueueHandle_t my_queue = xQueueCreate(10, sizeof(int));
+
+// Example: Queue for 5 structs
+QueueHandle_t sensor_queue = xQueueCreate(5, sizeof(SensorData_t));
+            </div>
+
+            <div class="key-point">
+                <strong>🔑 Key Insight:</strong> Use <code>sizeof()</code> not hardcoded numbers. Makes code portable and prevents bugs if data type changes.
+            </div>
+
+            <h3>Sending Data</h3>
+            <div class="code-block">
+BaseType_t xQueueSend(
+    QueueHandle_t xQueue,         // Queue to send to
+    const void *pvItemToQueue,    // ADDRESS of data to copy
+    TickType_t xTicksToWait       // How long to wait if full
+);
+
+// Example: Send integer
+int data = 42;
+xQueueSend(my_queue, &data, portMAX_DELAY);
+                            ^^^^^^  ^^^^^^^^^^^^^^^
+                            Address  Wait forever
+            </div>
+
+            <h3>Receiving Data</h3>
+            <div class="code-block">
+BaseType_t xQueueReceive(
+    QueueHandle_t xQueue,         // Queue to receive from
+    void *pvBuffer,               // ADDRESS where to store data
+    TickType_t xTicksToWait       // How long to wait if empty
+);
+
+// Example: Receive integer
+int received;
+xQueueReceive(my_queue, &received, portMAX_DELAY);
+                        ^^^^^^^^^  ^^^^^^^^^^^^^^^
+                        Buffer     Wait forever
+            </div>
+
+            <h2>💾 Why Use &data? (Data Copying Explained)</h2>
+            <div class="concept-box">
+                <p><strong>Critical Understanding:</strong> Queues COPY your data, they don't store pointers!</p>
+            </div>
+
+            <h3>Step-by-Step: What Happens</h3>
+            <div class="code-block">
+// 1. You have data on stack
+int value = 42;
+
+// 2. Send to queue - passes ADDRESS
+xQueueSend(queue, &value, portMAX_DELAY);
+//                ^^^^^^
+//                "Here's where to find the data"
+
+// Inside xQueueSend:
+// - Reads sizeof(int) bytes from &value
+// - COPIES those bytes into queue's internal buffer
+// - Your original 'value' is untouched
+
+// 3. Your value is now safe to reuse/change
+value = 100;  // Doesn't affect queued data!
+
+// 4. Consumer receives
+int received;
+xQueueReceive(queue, &received, portMAX_DELAY);
+//                   ^^^^^^^^^
+//                   "Here's where to store the copy"
+
+// Inside xQueueReceive:
+// - COPIES sizeof(int) bytes from queue buffer
+// - Writes to &received
+// - received now contains 42 (not 100!)
+            </div>
+
+            <div class="mermaid">
+                sequenceDiagram
+                    participant P as Producer
+                    participant S as Producer Stack
+                    participant Q as Queue Buffer
+                    participant C as Consumer
+                    participant CS as Consumer Stack
+                    
+                    P->>S: value = 42
+                    P->>Q: xQueueSend(&value)
+                    Note over Q: Copy 4 bytes<br/>from &value
+                    Q->>Q: Store [42]
+                    P->>S: value = 100
+                    Note over Q: Queue still [42]
+                    C->>Q: xQueueReceive(&received)
+                    Q->>CS: Copy [42] to received
+                    Note over CS: received = 42
+            </div>
+
+            <h3>Why Copy Instead of Pointers?</h3>
+            <table>
+                <tr>
+                    <th>Reason</th>
+                    <th>Explanation</th>
+                </tr>
+                <tr>
+                    <td><strong>Memory Safety</strong></td>
+                    <td>Producer's stack variables might be destroyed before consumer reads</td>
+                </tr>
+                <tr>
+                    <td><strong>Simplicity</strong></td>
+                    <td>No need to manage memory allocation/deallocation</td>
+                </tr>
+                <tr>
+                    <td><strong>Independence</strong></td>
+                    <td>Producer can reuse variables immediately after send</td>
+                </tr>
+                <tr>
+                    <td><strong>Thread Safety</strong></td>
+                    <td>No shared memory access = no race conditions</td>
+                </tr>
+            </table>
+
+            <h2>⏱️ Timeout Behavior</h2>
+            <table>
+                <tr>
+                    <th>Timeout Value</th>
+                    <th>Behavior</th>
+                    <th>Use Case</th>
+                </tr>
+                <tr>
+                    <td><code>portMAX_DELAY</code></td>
+                    <td>Block forever until space/data available</td>
+                    <td>Task must wait, no alternative action</td>
+                </tr>
+                <tr>
+                    <td><code>0</code></td>
+                    <td>Don't wait, return immediately</td>
+                    <td>Check queue but don't block (polling)</td>
+                </tr>
+                <tr>
+                    <td><code>pdMS_TO_TICKS(1000)</code></td>
+                    <td>Wait up to 1 second</td>
+                    <td>Wait with timeout, handle failure</td>
+                </tr>
+            </table>
+
+            <div class="code-block">
+// Example: Handle send with timeout
+if (xQueueSend(queue, &data, pdMS_TO_TICKS(500)) == pdTRUE) {
+    ESP_LOGI(TAG, "Data sent successfully");
+} else {
+    ESP_LOGW(TAG, "Queue full after 500ms timeout");
+    // Handle error: drop data, try again, signal error, etc.
+}
+            </div>
+
+            <h2>🚦 Task Blocking Deep Dive</h2>
+            <div class="concept-box">
+                <p><strong>Blocking</strong> means task transitions from RUNNING to BLOCKED state, giving CPU to other tasks.</p>
+            </div>
+
+            <h3>Without Blocking (Polling - Inefficient)</h3>
+            <div class="code-block">
+void consumer_polling(void *params) {
+    int data;
+    while(1) {
+        // Keep checking - wastes CPU!
+        if (xQueueReceive(queue, &data, 0) == pdTRUE) {
+            ESP_LOGI(TAG, "Received: %d", data);
+        }
+        vTaskDelay(pdMS_TO_TICKS(10));  // Still running
+    }
+}
+            </div>
+
+            <h3>With Blocking (Efficient)</h3>
+            <div class="code-block">
+void consumer_blocking(void *params) {
+    int data;
+    while(1) {
+        // Blocks here - ZERO CPU usage while waiting
+        xQueueReceive(queue, &data, portMAX_DELAY);
+        ESP_LOGI(TAG, "Received: %d", data);
+        // Instantly wakes when data arrives
+    }
+}
+            </div>
+
+            <h3>State Transition Diagram</h3>
+            <div class="mermaid">
+                stateDiagram-v2
+                    [*] --> Ready: Task Created
+                    Ready --> Running: Scheduler
+                    Running --> Blocked: xQueueReceive (empty)
+                    Blocked --> Ready: Producer sends data
+                    Ready --> Running: Scheduler
+                    Running --> Blocked: xQueueReceive (empty)
+                    
+                    note right of Blocked
+                        Task sleeps here
+                        Zero CPU usage
+                        Wakes when data available
+                    end note
+            </div>
+
+            <div class="pattern-card">
+                <h2>🎨 Design Pattern: Producer-Consumer</h2>
+                <p><strong>Problem:</strong> Decouple data generation from data processing</p>
+                
+                <h3>Why Use This Pattern?</h3>
+                <ul>
+                    <li><strong>Rate Mismatch:</strong> Producer and consumer operate at different speeds</li>
+                    <li><strong>Burst Handling:</strong> Buffer bursts of data for smooth processing</li>
+                    <li><strong>Loose Coupling:</strong> Tasks don't need to know about each other</li>
+                    <li><strong>Reliability:</strong> Data isn't lost if consumer is temporarily busy</li>
+                </ul>
+                
+                <h3>Real-World Examples</h3>
+                <ul>
+                    <li>Sensor readings → Data logging</li>
+                    <li>UART receiver → Command parser</li>
+                    <li>Button events → Action handler</li>
+                    <li>ADC samples → Signal processing</li>
+                </ul>
+            </div>
+
+            <h2>📊 Example: Producer-Consumer Implementation</h2>
+            <div class="code-block">
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#include "freertos/queue.h"
+#include "esp_log.h"
+
+static const char *TAG_PROD = "Producer";
+static const char *TAG_CONS = "Consumer";
+
+QueueHandle_t data_queue;
+
+void producer_task(void *params) {
+    int counter = 0;
+    while(1) {
+        counter++;
+        ESP_LOGI(TAG_PROD, "Sending: %d", counter);
+        xQueueSend(data_queue, &counter, portMAX_DELAY);
+        vTaskDelay(pdMS_TO_TICKS(500));  // Produce every 500ms
+    }
+}
+
+void consumer_task(void *params) {
+    int received;
+    while(1) {
+        // Blocks until data available
+        xQueueReceive(data_queue, &received, portMAX_DELAY);
+        ESP_LOGI(TAG_CONS, "Received: %d", received);
+        // Process data here (takes variable time)
+    }
+}
+
+extern "C" void app_main(void) {
+    // Create queue for 5 integers
+    data_queue = xQueueCreate(5, sizeof(int));
+    
+    // Create tasks
+    xTaskCreate(&producer_task, "Producer", 2048, NULL, 5, NULL);
+    xTaskCreate(&consumer_task, "Consumer", 2048, NULL, 5, NULL);
+}
+            </div>
+
+            <h2>🤔 Critical Thinking Questions</h2>
+            <div class="concept-box">
+                <ol>
+                    <li><strong>Why does queue copy data instead of storing pointers?</strong><br>
+                    <em>Answer:</em> Memory safety - prevents dangling pointers when producer's stack variables go out of scope.</li>
+                    
+                    <li><strong>What happens if producer is consistently faster than consumer?</strong><br>
+                    <em>Answer:</em> Queue fills up. Producer blocks until space available (with portMAX_DELAY) or returns error (with timeout).</li>
+                    
+                    <li><strong>How would you size the queue?</strong><br>
+                    <em>Answer:</em> Consider: burst capacity (max items before processing), processing time variance, acceptable data loss tolerance.</li>
+                    
+                    <li><strong>What's difference between portMAX_DELAY and 0?</strong><br>
+                    <em>Answer:</em> portMAX_DELAY blocks forever (efficient), 0 returns immediately (polling, wastes CPU).</li>
+                    
+                    <li><strong>Why use sizeof(int) not "4"?</strong><br>
+                    <em>Answer:</em> Portability - int size varies by architecture. sizeof() is always correct.</li>
+                    
+                    <li><strong>Can you send pointers through queue?</strong><br>
+                    <em>Answer:</em> Yes, but YOU manage memory lifetime. Queue copies pointer value, not pointed-to data.</li>
+                </ol>
+            </div>
+
+            <h2>⚠️ Common Pitfalls</h2>
+            <div class="danger">
+                <strong>❌ Sending Pointer to Stack Variable</strong>
+                <div class="code-block">
+void producer_task(void *params) {
+    while(1) {
+        int data = 42;
+        int *ptr = &data;
+        xQueueSend(queue, &ptr, portMAX_DELAY);  // Sends pointer
+        // data destroyed here!
+    }
+}
+// Consumer receives dangling pointer - CRASH!
+                </div>
+            </div>
+
+            <div class="warning">
+                <strong>⚠️ Wrong sizeof()</strong>
+                <div class="code-block">
+// WRONG: Creates queue for 10 pointers (not 10 ints!)
+QueueHandle_t q = xQueueCreate(10, sizeof(int*));
+
+// Correct: Creates queue for 10 integers
+QueueHandle_t q = xQueueCreate(10, sizeof(int));
+                </div>
+            </div>
+
+            <div class="warning">
+                <strong>⚠️ Forgetting to Check Return Value</strong>
+                <div class="code-block">
+// BAD: Ignores failures
+xQueueSend(queue, &data, 0);
+
+// GOOD: Handles failures
+if (xQueueSend(queue, &data, 0) != pdTRUE) {
+    ESP_LOGW(TAG, "Queue full, data dropped");
+}
+                </div>
+            </div>
+
+            <h2>🚀 Advanced: Sending Structs</h2>
+            <div class="code-block">
+typedef struct {
+    uint32_t timestamp;
+    float temperature;
+    float humidity;
+} SensorData_t;
+
+// Create queue for sensor data
+QueueHandle_t sensor_queue = xQueueCreate(10, sizeof(SensorData_t));
+
+// Producer
+void sensor_task(void *params) {
+    SensorData_t reading;
+    while(1) {
+        reading.timestamp = xTaskGetTickCount();
+        reading.temperature = read_temp();
+        reading.humidity = read_humidity();
+        
+        xQueueSend(sensor_queue, &reading, portMAX_DELAY);
+        vTaskDelay(pdMS_TO_TICKS(1000));
+    }
+}
+
+// Consumer
+void logger_task(void *params) {
+    SensorData_t data;
+    while(1) {
+        xQueueReceive(sensor_queue, &data, portMAX_DELAY);
+        ESP_LOGI(TAG, "Time:%lu Temp:%.1f Hum:%.1f", 
+                 data.timestamp, data.temperature, data.humidity);
+    }
+}
+            </div>
+
+            <h2>⚡ Best Practices</h2>
+            <ul>
+                <li>✅ Always check return values (pdTRUE/pdFALSE)</li>
+                <li>✅ Use <code>portMAX_DELAY</code> for blocking, not polling loops</li>
+                <li>✅ Size queue based on burst capacity + processing time</li>
+                <li>✅ Use <code>sizeof()</code> not hardcoded sizes</li>
+                <li>✅ Create queue before tasks that use it</li>
+                <li>✅ Document expected queue item type</li>
+                <li>❌ Don't send pointers to stack variables</li>
+                <li>❌ Don't ignore xQueueSend() failures</li>
+                <li>❌ Don't poll queue with timeout=0 in loops (use blocking)</li>
+                <li>❌ Don't forget NULL check on xQueueCreate() return</li>
+            </ul>
+
+            <h2>🎓 What You've Learned</h2>
+            <div class="success">
+                <ul>
+                    <li>Queues provide thread-safe FIFO communication between tasks</li>
+                    <li>Data is COPIED not shared - prevents memory lifetime issues</li>
+                    <li>&data passes address so queue knows where to copy from</li>
+                    <li>Blocking makes tasks sleep efficiently (zero CPU waste)</li>
+                    <li>Producer-Consumer pattern decouples data generation/processing</li>
+                    <li>portMAX_DELAY blocks forever, 0 returns immediately</li>
+                    <li>sizeof() ensures correct item size across architectures</li>
+                    <li>Return values indicate success/failure - always check them</li>
+                </ul>
+            </div>
+
+            <h2>🔗 Related Concepts</h2>
+            <ul>
+                <li><strong>Semaphores:</strong> Queues with no data (signaling only)</li>
+                <li><strong>Mutexes:</strong> Binary semaphores with priority inheritance</li>
+                <li><strong>Event Groups:</strong> Multiple binary flags (AND/OR logic)</li>
+                <li><strong>Stream Buffers:</strong> Byte-stream queues (variable size data)</li>
+            </ul>
+        </div>
+    </div>
+    <script>
+        mermaid.initialize({ startOnLoad: true, theme: 'default' });
+    </script>
+</body>
+</html>

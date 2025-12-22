@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Task Parameters & Memory Management - ESP32 Tutorial</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            padding: 20px;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        header {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        header h1 { font-size: 2.5em; margin-bottom: 10px; }
+        header p { font-size: 1.2em; opacity: 0.9; }
+        .content { padding: 40px; }
+        h2 {
+            color: #f5576c;
+            border-bottom: 3px solid #f5576c;
+            padding-bottom: 10px;
+            margin: 30px 0 20px 0;
+        }
+        h3 { color: #f093fb; margin: 20px 0 10px 0; }
+        .concept-box {
+            background: #f8f9fa;
+            border-left: 4px solid #f5576c;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+        .code-block {
+            background: #2d2d2d;
+            color: #f8f8f2;
+            padding: 20px;
+            border-radius: 5px;
+            overflow-x: auto;
+            margin: 15px 0;
+            font-family: 'Courier New', Consolas, Monaco, monospace;
+            font-size: 13px;
+            line-height: 1.5;
+            white-space: pre;
+        }
+        .warning {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 5px;
+        }
+        .danger {
+            background: #f8d7da;
+            border-left: 4px solid #dc3545;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 5px;
+        }
+        .success {
+            background: #d4edda;
+            border-left: 4px solid #28a745;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 5px;
+        }
+        .key-point {
+            background: #e3f2fd;
+            border-left: 4px solid #2196f3;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 5px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background: #f5576c;
+            color: white;
+        }
+        tr:hover { background: #f5f5f5; }
+        .mermaid { text-align: center; margin: 30px 0; }
+        .comparison {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin: 20px 0;
+        }
+        .comparison > div {
+            padding: 15px;
+            border-radius: 5px;
+        }
+        .comparison .method1 {
+            background: #d4edda;
+            border: 2px solid #28a745;
+        }
+        .comparison .method2 {
+            background: #cfe2ff;
+            border: 2px solid #0d6efd;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🎯 Task Parameters & Memory</h1>
+            <p>Passing Data to Tasks & Understanding C Memory</p>
+        </header>
+        
+        <div class="content">
+            <h2>🔄 The Parameter Problem</h2>
+            <div class="concept-box">
+                <p>Tasks need configuration data: delays, pin numbers, thresholds, etc. But <code>xTaskCreate()</code> only accepts one parameter of type <code>void *</code>.</p>
+                <p><strong>Question:</strong> How do we pass different types of data?</p>
+                <p><strong>Answer:</strong> Type casting with <code>void *</code> (C's generic pointer)!</p>
+            </div>
+
+            <h2>📦 Method 1: Passing By Value (Small Integers)</h2>
+            <div class="code-block">
+// Cast integer TO void pointer (store value IN pointer)
+int delay = 500;
+xTaskCreate(&task, "Task1", 2048, (void*)delay, 5, NULL);
+                                         ^^^^^^^^^ 
+                                         Value stored directly
+
+// Inside task: Cast FROM void pointer back to int
+void task(void *pvParameter) {
+    int delay_ms = (int)pvParameter;  // Extract value
+    //              ^^^^ Direct cast
+    ESP_LOGI(TAG, "Delay: %d", delay_ms);
+}
+            </div>
+
+            <div class="key-point">
+                <strong>🔑 Why This Works:</strong> On ESP32 (32-bit architecture), both <code>int</code> and pointers are 32 bits. We store the integer value <em>directly in the pointer variable</em>, not at the address it points to!
+            </div>
+
+            <h3>Memory Visualization</h3>
+            <div class="mermaid">
+                graph LR
+                    A[int delay = 500] -->|Cast to void*| B[void* = 0x000001F4]
+                    B -->|Pass to task| C[pvParameter = 0x000001F4]
+                    C -->|Cast to int| D[delay_ms = 500]
+                    style B fill:#90ee90
+                    style D fill:#90ee90
+            </div>
+
+            <div class="success">
+                <strong>✅ Advantages:</strong>
+                <ul>
+                    <li>No memory lifetime issues</li>
+                    <li>Simple and fast</li>
+                    <li>Value is copied, safe to reuse variable</li>
+                </ul>
+            </div>
+
+            <div class="warning">
+                <strong>⚠️ Limitations:</strong>
+                <ul>
+                    <li>Only works for values that fit in 32 bits</li>
+                    <li>Can't pass multiple values this way</li>
+                    <li>Not portable (assumes pointer size = int size)</li>
+                </ul>
+            </div>
+
+            <h2>📍 Method 2: Passing By Address (Any Data)</h2>
+            <div class="code-block">
+// Pass ADDRESS of variable
+int delay = 1000;
+xTaskCreate(&task, "Task1", 2048, &delay, 5, NULL);
+                                  ^^^^^^ 
+                                  Address of delay
+
+// Inside task: Dereference pointer to get value
+void task(void *pvParameter) {
+    int delay_ms = *(int*)pvParameter;  // Read from address
+    //             ^^^^^^^^^^^ Cast then dereference
+    ESP_LOGI(TAG, "Delay: %d", delay_ms);
+}
+            </div>
+
+            <h3>Memory Visualization</h3>
+            <div class="mermaid">
+                graph TD
+                    A[Stack: delay = 1000<br/>Address: 0x3FFC1234] 
+                    B[void* pvParameter = 0x3FFC1234]
+                    C[Cast to int*]
+                    D[Dereference *]
+                    E[Read value: 1000]
+                    
+                    A -->|&delay| B
+                    B --> C
+                    C --> D
+                    D -->|Read from 0x3FFC1234| E
+                    
+                    style A fill:#ffcccb
+                    style E fill:#90ee90
+            </div>
+
+            <div class="danger">
+                <strong>⚠️ CRITICAL DANGER:</strong> If the original variable is on the stack and goes out of scope, the pointer becomes invalid (dangling pointer)!
+            </div>
+
+            <h2>🧠 Memory Lifetime: The Critical Issue</h2>
+            
+            <h3>The Problem</h3>
+            <div class="code-block">
+extern "C" void app_main(void) {
+    int delay = 1000;  // Local variable on stack
+    xTaskCreate(&task, "Task1", 2048, &delay, 5, NULL);
+    // app_main exits here
+    // delay variable is destroyed
+    // Task tries to read from destroyed memory = UNDEFINED BEHAVIOR!
+}
+            </div>
+
+            <div class="mermaid">
+                sequenceDiagram
+                    participant M as app_main
+                    participant S as Stack
+                    participant T as Task
+                    
+                    M->>S: Create delay = 1000
+                    M->>T: Pass &delay (0x3FFC1234)
+                    Note over M: app_main exits
+                    M->>S: Destroy delay
+                    Note over S: Memory freed/reused
+                    T->>S: Read from 0x3FFC1234
+                    Note over T: UNDEFINED BEHAVIOR!<br/>Might work, might crash,<br/>might return garbage
+            </div>
+
+            <h3>Solutions to Memory Lifetime</h3>
+            <table>
+                <tr>
+                    <th>Solution</th>
+                    <th>When to Use</th>
+                    <th>Example</th>
+                </tr>
+                <tr>
+                    <td><strong>Static Variable</strong></td>
+                    <td>Data persists entire program</td>
+                    <td><code>static int delay = 1000;</code></td>
+                </tr>
+                <tr>
+                    <td><strong>Global Variable</strong></td>
+                    <td>Data shared across files</td>
+                    <td><code>int g_delay = 1000;</code> (outside functions)</td>
+                </tr>
+                <tr>
+                    <td><strong>Heap Allocation</strong></td>
+                    <td>Dynamic, task manages lifetime</td>
+                    <td><code>int *p = malloc(sizeof(int));</code></td>
+                </tr>
+                <tr>
+                    <td><strong>Pass by Value</strong></td>
+                    <td>Small data (≤32 bits)</td>
+                    <td><code>(void*)delay</code></td>
+                </tr>
+            </table>
+
+            <h2>📚 Method 3: Passing Structs (Multiple Values)</h2>
+            <div class="concept-box">
+                <p>When you need to pass multiple values, use a <code>struct</code> to group related data.</p>
+            </div>
+
+            <div class="code-block">
+// Define structure type
+typedef struct {
+    int delay_ms;
+    int pin_number;
+    const char *name;
+} TaskConfig_t;
+
+// Create configuration (must persist!)
+static TaskConfig_t config1 = {
+    .delay_ms = 500,
+    .pin_number = 2,
+    .name = "LED1"
+};
+
+// Pass struct address
+xTaskCreate(&task, "Task1", 2048, &config1, 5, NULL);
+
+// Inside task: Access struct members
+void task(void *pvParameter) {
+    TaskConfig_t *config = (TaskConfig_t *)pvParameter;
+    ESP_LOGI(config->name, "Pin %d, Delay %d", 
+             config->pin_number, config->delay_ms);
+    //       ^^^^^^ Arrow operator for pointer to struct
+}
+            </div>
+
+            <div class="key-point">
+                <strong>🔑 Arrow Operator:</strong> <code>config->field</code> is shorthand for <code>(*config).field</code>
+            </div>
+
+            <h2>⚖️ Comparison: Value vs Address</h2>
+            <div class="comparison">
+                <div class="method1">
+                    <h3>Pass By Value (void*)500</h3>
+                    <strong>Pros:</strong>
+                    <ul>
+                        <li>✅ No memory lifetime issues</li>
+                        <li>✅ Safe and simple</li>
+                        <li>✅ Fast (no indirection)</li>
+                    </ul>
+                    <strong>Cons:</strong>
+                    <ul>
+                        <li>❌ Only ≤32 bits</li>
+                        <li>❌ Single value only</li>
+                        <li>❌ Not portable</li>
+                    </ul>
+                    <strong>Use When:</strong> Passing simple integers/enums
+                </div>
+                <div class="method2">
+                    <h3>Pass By Address &variable</h3>
+                    <strong>Pros:</strong>
+                    <ul>
+                        <li>✅ Any data size</li>
+                        <li>✅ Multiple values (struct)</li>
+                        <li>✅ Standard C pattern</li>
+                    </ul>
+                    <strong>Cons:</strong>
+                    <ul>
+                        <li>❌ Lifetime management required</li>
+                        <li>❌ Dangling pointer risk</li>
+                        <li>❌ Slower (dereference)</li>
+                    </ul>
+                    <strong>Use When:</strong> Passing structs/arrays/strings
+                </div>
+            </div>
+
+            <h2>🔍 C Language Deep Dive</h2>
+            
+            <h3>Void Pointers (void*)</h3>
+            <div class="concept-box">
+                <p><code>void *</code> is C's "generic pointer" - can point to any type.</p>
+                <ul>
+                    <li>Can be assigned from any pointer type without cast</li>
+                    <li>MUST be cast before dereferencing</li>
+                    <li>Compiler doesn't know what it points to</li>
+                    <li>Used for generic APIs (xTaskCreate, malloc, etc.)</li>
+                </ul>
+            </div>
+
+            <div class="code-block">
+int x = 42;
+float y = 3.14;
+char *s = "hello";
+
+void *p;        // Generic pointer
+p = &x;         // OK - points to int
+p = &y;         // OK - points to float
+p = s;          // OK - points to char*
+
+// Must cast before use
+int val = *(int*)p;     // OK
+float f = *(float*)p;   // WRONG type! Undefined behavior!
+            </div>
+
+            <h3>Type Casting Syntax</h3>
+            <table>
+                <tr>
+                    <th>Cast</th>
+                    <th>Meaning</th>
+                    <th>Example</th>
+                </tr>
+                <tr>
+                    <td><code>(int)</code></td>
+                    <td>Convert to int</td>
+                    <td><code>(int)pvParameter</code></td>
+                </tr>
+                <tr>
+                    <td><code>(int*)</code></td>
+                    <td>Convert to pointer to int</td>
+                    <td><code>(int*)pvParameter</code></td>
+                </tr>
+                <tr>
+                    <td><code>*(int*)</code></td>
+                    <td>Cast then dereference</td>
+                    <td><code>*(int*)pvParameter</code></td>
+                </tr>
+                <tr>
+                    <td><code>(MyStruct_t*)</code></td>
+                    <td>Cast to struct pointer</td>
+                    <td><code>(MyStruct_t*)pvParameter</code></td>
+                </tr>
+            </table>
+
+            <h2>💡 Critical Thinking Questions</h2>
+            <div class="concept-box">
+                <ol>
+                    <li><strong>Why use void* instead of just int for xTaskCreate?</strong><br>
+                    Flexibility - allows passing ANY type of data, not just integers.</li>
+                    
+                    <li><strong>What happens if you cast wrong type?</strong><br>
+                    Undefined behavior - might read garbage, might crash, might corrupt memory.</li>
+                    
+                    <li><strong>Why does pass-by-value "work by luck" on ESP32?</strong><br>
+                    Because pointer size == int size (both 32-bit). Won't work on 64-bit systems!</li>
+                    
+                    <li><strong>When should you use static vs malloc?</strong><br>
+                    Static: fixed lifetime, simpler. Malloc: dynamic lifetime, more control.</li>
+                    
+                    <li><strong>What's the & operator really doing?</strong><br>
+                    Returns the memory address of a variable (address-of operator).</li>
+                </ol>
+            </div>
+
+            <h2>⚡ Best Practices</h2>
+            <ul>
+                <li>✅ Use pass-by-value for simple scalars (≤32 bits)</li>
+                <li>✅ Use structs for multiple related parameters</li>
+                <li>✅ Make config structs <code>static</code> or global to ensure lifetime</li>
+                <li>✅ Always cast void* to correct type before use</li>
+                <li>✅ Document what type is expected in void* parameter</li>
+                <li>❌ Never pass address of local variable that will go out of scope</li>
+                <li>❌ Don't assume pointer size == int size (portability)</li>
+                <li>❌ Never dereference void* directly - cast first</li>
+            </ul>
+
+            <h2>🎓 What You've Learned</h2>
+            <div class="success">
+                <ul>
+                    <li>void* is C's generic pointer type for flexible APIs</li>
+                    <li>Two methods: pass by value (store in pointer) vs by address</li>
+                    <li>Memory lifetime is critical - local variables are dangerous</li>
+                    <li>static/global/heap keeps data alive for task lifetime</li>
+                    <li>Structs group related data for passing multiple values</li>
+                    <li>Arrow operator (->) accesses struct members via pointer</li>
+                    <li>Type casting is required before dereferencing void*</li>
+                    <li>Wrong cast = undefined behavior (silent corruption possible)</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    <script>
+        mermaid.initialize({ startOnLoad: true, theme: 'default' });
+    </script>
+</body>
+</html>
