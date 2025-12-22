@@ -28,15 +28,15 @@
 ## Current Status
 
 **Current Week:** Week 1  
-**Current Day:** Day 3  
-**Current Challenge:** Day 3, Exercise 1 (Priority Demonstration) - IN PROGRESS
-**Overall Progress:** 2/28 days (7%)
+**Current Day:** Day 4  
+**Current Challenge:** Day 4, Exercise 1 (Producer-Consumer Pattern) - IN PROGRESS
+**Overall Progress:** 3/28 days (11%)
 
 ---
 
 ## Weekly Progress
 
-### 🔵 Week 1: FreeRTOS Fundamentals (2/7 days completed)
+### 🔵 Week 1: FreeRTOS Fundamentals (3/7 days completed)
 - ✅ Day 1: ESP-IDF vs Arduino, Build System (COMPLETED)
   - ✅ Setup Verification: LED Blink
   - ✅ Exercise 3: ESP Logging Levels (4 log levels, counter, modulo operator)
@@ -45,10 +45,13 @@
   - ✅ Exercise 1: Two Talking Tasks (concurrent execution, function pointers)
   - ✅ Exercise 2: Task with Parameters (void* casting, passing data)
   - ✅ Exercise 3: Struct Parameters (grouping related data, arrow operator, race conditions)
-- 🔄 Day 3: Task Scheduling & Priorities (IN PROGRESS)
-  - ⬜ Exercise 1: Priority Demonstration
-  - ⬜ Exercise 2: Dynamic Priority Change
-- ⬜ Day 4: Inter-Task Communication (Queues)
+- ✅ Day 3: Task Scheduling & Priorities (COMPLETED)
+  - ✅ Exercise 1: Priority Demonstration (three tasks, different priorities)
+  - ✅ Exercise 2: Dynamic Priority Change (runtime priority modification, task states)
+  - **Key Learnings:** Priority preemption, TaskHandle_t opaque pointers, uxTaskPriorityGet(), vTaskPrioritySet(), NULL for self-reference, task states (READY vs BLOCKED), strcmp() returns 0 for match
+- 🔄 Day 4: Inter-Task Communication (Queues) (IN PROGRESS)
+  - ⬜ Exercise 1: Producer-Consumer Pattern
+  - ⬜ Exercise 2: Sending Structs via Queue
 - ⬜ Day 5: Semaphores & Mutexes
 - ⬜ Day 6-7: Practice Project: Multi-Task LED Controller
 
@@ -180,7 +183,74 @@
 
 ---
 
-#### Day 2: FreeRTOS Tasks (⬜ Not Started)
+#### Day 3: Task Scheduling & Priorities (✅ Completed)
+**Date:** December 22, 2025  
+**Time Spent:** ~2 hours  
+**Status:** Completed
+
+**What I Learned:**
+- Priority-based preemptive scheduling in FreeRTOS
+- TaskHandle_t as opaque pointer type for task control
+- uxTaskPriorityGet() to query task priority
+- vTaskPrioritySet() to change priority at runtime
+- NULL in FreeRTOS functions means "current task" - no handle needed for self-reference
+- **Critical Discovery:** Priority only matters when tasks are READY to run
+- Tasks in BLOCKED state (vTaskDelay) don't compete regardless of priority
+- Shortened delays (10ms) needed to see priority preemption in action
+
+**Exercises Completed:**
+- [x] Exercise 1: Priority Demonstration (three tasks with priorities 1, 3, 5)
+- [x] Exercise 2: Dynamic Priority Change (runtime priority boost with verification)
+
+**Challenges Faced:**
+- Initially used strcmp() incorrectly (forgot it returns 0 for match)
+- First implementation with 1-second delays didn't show priority difference
+- Learned that tasks must be READY (not BLOCKED) to compete for CPU
+
+**Key Concepts Mastered:**
+- Opaque pointers and why they're used (information hiding, API stability)
+- Difference between controlling self (NULL) vs controlling other tasks (need handle)
+- Task states: RUNNING, READY, BLOCKED, SUSPENDED
+- Priority preemption behavior and when it applies
+- Handle vs no handle - when each is needed
+
+**C Concepts Learned:**
+- strcmp() return values (0 = match, classic C gotcha)
+- Opaque pointer pattern in C APIs
+- NULL as special value meaning "current context"
+
+**Questions Answered:**
+- ✅ Why use handles at all if NULL works for self? (To control OTHER tasks)
+- ✅ How to verify priority actually changed? (uxTaskPriorityGet())
+- ✅ Why doesn't priority change behavior with long delays? (Tasks not competing - BLOCKED state)
+
+**Notes:**
+- Excellent hands-on discovery of RTOS fundamentals
+- Testing revealed edge cases and deepened understanding
+- Ready for inter-task communication patterns
+
+---
+
+#### Day 4: Queues - Inter-Task Communication (🔄 In Progress)
+**Date:** December 22, 2025  
+**Time Spent:** _______________  
+**Status:** In Progress (0/2 exercises completed)
+
+**What I'm Learning:**
+- Producer-Consumer design pattern
+- Queue-based inter-task communication
+- Data copying vs pointer sharing
+
+**Exercises Completed:**
+- [ ] Exercise 1: Producer-Consumer Pattern (integers)
+- [ ] Exercise 2: Sending Structs via Queue
+
+**Notes:**
+- Starting fundamental embedded communication pattern
+
+---
+
+#### Day 2: FreeRTOS Tasks (⬜ Not Started - DEPRECATED ENTRY)
 **Date:** _______________  
 **Time Spent:** _______________  
 **Status:** Not Started
