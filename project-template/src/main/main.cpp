@@ -1,126 +1,136 @@
 /**
- * Day 4 - Exercise 1: Producer-Consumer Pattern
+ * Day 5 - Exercise 1: Binary Semaphore for Signaling
  *
- * CHALLENGE: Implement inter-task communication using queues
+ * CHALLENGE: Use semaphores to coordinate tasks
  *
  * REQUIREMENTS:
- * ✅ Create a queue that holds 5 integers
- * ✅ Producer task: Sends incrementing integers (0, 1, 2, ...) every 500ms
- * ✅ Consumer task: Receives integers and logs them
- * ✅ Both tasks run continuously
+ * ✅ Create a binary semaphore for task coordination
+ * ✅ Producer task: Sends semaphore signal every 2 seconds
+ * ✅ Consumer task: Waits for semaphore, then performs action
+ * ✅ Log when signal is given and received
  *
  * FUNCTIONS YOU'LL NEED:
- * - xQueueCreate(length, item_size) - Create the queue
- * - xQueueSend(queue, &data, timeout) - Send data to queue
- * - xQueueReceive(queue, &buffer, timeout) - Receive data from queue
+ * - xSemaphoreCreateBinary() - Create binary semaphore
+ * - xSemaphoreGive(semaphore) - Signal the semaphore
+ * - xSemaphoreTake(semaphore, timeout) - Wait for semaphore
  *
  * C CONCEPTS TO LEARN:
  *
- * Queues and Data Copying
- * -----------------------
- * Queues COPY your data, they don't store pointers!
+ * Semaphores vs Queues - What's the Difference?
+ * ----------------------------------------------
+ * QUEUE: Passes DATA between tasks
+ * - xQueueSend() copies your data into queue
+ * - xQueueReceive() copies data out
+ * - Use for: Sensor readings, commands, packets
  *
- * Why use &data when sending?
- * - Queue needs the ADDRESS to read the data from
- * - It reads sizeof(int) bytes from that address
- * - It stores a COPY in the queue
- * - Your original variable is safe to reuse
+ * SEMAPHORE: Signals EVENTS, no data
+ * - xSemaphoreGive() sets flag (count = 1)
+ * - xSemaphoreTake() clears flag (count = 0)
+ * - Use for: "Something happened!", "Resource available", "Go!"
  *
- * Example:
- * int data = 42;
- * xQueueSend(queue, &data, portMAX_DELAY);
- *                   ^--- Address of data
- * // Queue now has a copy of 42
- * // You can change data without affecting the queued value
+ * Binary Semaphore States:
+ * - Count = 0: Not available (task will block on Take)
+ * - Count = 1: Available (task can Take immediately)
  *
- * Receiving:
- * int received;
- * xQueueReceive(queue, &received, portMAX_DELAY);
- *                      ^--- Address where to store the data
- * // Queue copies its data INTO received variable
+ * Think of it like a flag:
+ * - Give() raises the flag
+ * - Take() lowers the flag and proceeds
+ * - If flag is down, Take() waits until someone raises it
  *
- * DESIGN PATTERN: Producer-Consumer
- * ----------------------------------
- * One of the most fundamental patterns in embedded systems!
+ * DESIGN PATTERN: Event Signaling
+ * --------------------------------
+ * One of the most common synchronization patterns!
  *
  * Problem it solves:
- * - Decouple data generation from data processing
- * - Handle different rates (fast producer, slow consumer)
- * - Buffer data to prevent loss during processing
+ * - Task B needs to wait for Task A to finish something
+ * - Task needs to wait for external event (button, sensor, timer)
+ * - Deferred interrupt handling (ISR → Task)
  *
- * Why use it:
- * - Sensor reads at fixed rate, processing time varies
- * - UART receives data asynchronously, parsing takes time
- * - Button events are instant, actions take longer
+ * Classic use cases:
+ * - Button press → Action task
+ * - Data ready → Processing task
+ * - Timer expired → Periodic task
+ * - Hardware interrupt → Handler task
  *
- * Queue as the Buffer:
- * - Producer never waits for consumer (unless queue full)
- * - Consumer never misses data (unless queue empty)
- * - Both tasks are independent and loosely coupled
+ * Without semaphore (BAD):
+ * - Polling: while(!flag) { vTaskDelay(10); }  ← Wastes CPU!
+ * - Global flag with race conditions
+ * - Busy-wait loops
+ *
+ * With semaphore (GOOD):
+ * - Task blocks efficiently (zero CPU usage)
+ * - OS wakes task immediately when signaled
+ * - Clean, race-free coordination
+ *
+ * SemaphoreHandle_t - Another Handle Type
+ * ----------------------------------------
+ * Like TaskHandle_t and QueueHandle_t:
+ * - Opaque pointer to semaphore object
+ * - Must be initialized before use
+ * - Pass to Give/Take functions
+ * - Can be shared between tasks
+ *
+ * Example:
+ * SemaphoreHandle_t mySemaphore;
+ * mySemaphore = xSemaphoreCreateBinary();
+ *               ^--- Returns handle or NULL on failure
  *
  * CRITICAL THINKING QUESTIONS:
- * - Why does the queue COPY data instead of storing pointers?
- * - What happens if the producer is consistently faster than consumer?
- * - How would you size the queue? (Think: burst capacity, processing time)
- * - What's the difference between portMAX_DELAY and 0 for timeout?
- * - Why use sizeof(int) instead of just "4"?
+ * - Why use semaphore instead of a global flag variable?
+ * - What happens if you Give() twice without Take()?
+ * - Binary semaphore vs counting semaphore - what's the difference?
+ * - Can multiple tasks wait on the same semaphore?
+ * - What happens if you Take() but no one ever Give()s?
  *
  * TIMEOUT VALUES:
- * - portMAX_DELAY = Block forever until space/data available
- * - 0 = Don't wait, return immediately if full/empty
- * - pdMS_TO_TICKS(1000) = Wait up to 1 second
+ * - portMAX_DELAY = Wait forever
+ * - 0 = Check and return immediately (non-blocking)
+ * - pdMS_TO_TICKS(5000) = Wait up to 5 seconds
  */
 
 #include <stdio.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
-#include "freertos/queue.h"
+#include "freertos/semphr.h"
 #include "esp_log.h"
 
-static const char *TAG = "QueueDemo";
+static const char *TAG = "SemaphoreDemo";
 
-// TODO: Declare a QueueHandle_t variable to store the queue handle
-QueueHandle_t my_queue;
+// TODO: Declare a SemaphoreHandle_t variable to store the semaphore handle
 
-void producerTask(void *pvParameter)
+
+void signalerTask(void *pvParameter)
 {
-    QueueHandle_t queue = (QueueHandle_t)pvParameter;
-    const char *TAG = "producer";
-    // TODO: Create producer task function
-    // This task should:
-    // - Have a counter that increments
-    // - Send the counter value to the queue
-    // - Delay 500ms between sends
-    // - Log what it's sending
-
-    int counter = 0;
-    int delayms = 500;
-
+    // TODO: Cast parameter to SemaphoreHandle_t
+    // TODO: Create a local TAG for this task's logs
+    
+    // TODO: Implement signaler logic
+    // Every 2 seconds:
+    // 1. Log that you're about to signal
+    // 2. Give the semaphore using xSemaphoreGive()
+    // 3. Delay 2000ms
+    
     while (1)
     {
-        xQueueSend(queue, &counter, portMAX_DELAY);
-                ESP_LOGI(TAG, "Sent %d to Queue", counter++);
-
-        vTaskDelay(pdMS_TO_TICKS(delayms));
+        // Your code here
+        
+        vTaskDelay(pdMS_TO_TICKS(2000));
     }
 }
 
-void consumerTask(void *pvParameter)
+void waiterTask(void *pvParameter)
 {
-    QueueHandle_t queue = (QueueHandle_t)pvParameter;
-    const char *TAG = "consumer";
-    int receivedData = 0;
-
+    // TODO: Cast parameter to SemaphoreHandle_t
+    // TODO: Create a local TAG for this task's logs
+    
     while (1)
     {
-        xQueueReceive(queue, &receivedData, portMAX_DELAY);
-        ESP_LOGI(TAG, "Received %d from Queue", receivedData);
+        // TODO: Wait for semaphore using xSemaphoreTake()
+        // Use portMAX_DELAY to wait forever
+        
+        // TODO: When you receive the signal, log a message
+        // Maybe do some action (simulate work with a delay)
     }
-    // TODO: Create consumer task function
-    // This task should:
-    // - Receive data from the queue (blocking)
-    // - Log the received value
-    // - Process immediately (no extra delay needed - blocked on receive)
 }
 
 extern "C" void app_main(void)
@@ -128,15 +138,13 @@ extern "C" void app_main(void)
     esp_log_level_set("*", ESP_LOG_INFO);
 
     ESP_LOGI(TAG, "=================================");
-    ESP_LOGI(TAG, "Day 4 - Exercise 1: Producer-Consumer");
+    ESP_LOGI(TAG, "Day 5 - Exercise 1: Binary Semaphore");
     ESP_LOGI(TAG, "=================================");
 
-    // TODO: Create the queue
-    // Hint: my_queue = xQueueCreate(5, sizeof(int));
-    my_queue = xQueueCreate(5, sizeof(int));
-    // TODO: Create producer task
-    xTaskCreate(&producerTask, "Producer", 2048, (void *)my_queue, 5, NULL);
-
-    // TODO: Create consumer task
-    xTaskCreate(&consumerTask, "Consumer", 2048, (void *)my_queue, 5, NULL);
+    // TODO: Create the binary semaphore
+    // Hint: mySemaphore = xSemaphoreCreateBinary();
+    
+    // TODO: Create signaler task (pass semaphore handle as parameter)
+    
+    // TODO: Create waiter task (pass semaphore handle as parameter)
 }

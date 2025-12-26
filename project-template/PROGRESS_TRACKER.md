@@ -28,15 +28,15 @@
 ## Current Status
 
 **Current Week:** Week 1  
-**Current Day:** Day 4  
-**Current Challenge:** Day 4, Exercise 1 (Producer-Consumer Pattern) - IN PROGRESS
-**Overall Progress:** 3/28 days (11%)
+**Current Day:** Day 5  
+**Current Challenge:** Day 5, Exercise 1 (Semaphores & Resource Management) - READY TO START
+**Overall Progress:** 4/28 days (14%)
 
 ---
 
 ## Weekly Progress
 
-### 🔵 Week 1: FreeRTOS Fundamentals (3/7 days completed)
+### 🔵 Week 1: FreeRTOS Fundamentals (4/7 days completed)
 - ✅ Day 1: ESP-IDF vs Arduino, Build System (COMPLETED)
   - ✅ Setup Verification: LED Blink
   - ✅ Exercise 3: ESP Logging Levels (4 log levels, counter, modulo operator)
@@ -49,9 +49,10 @@
   - ✅ Exercise 1: Priority Demonstration (three tasks, different priorities)
   - ✅ Exercise 2: Dynamic Priority Change (runtime priority modification, task states)
   - **Key Learnings:** Priority preemption, TaskHandle_t opaque pointers, uxTaskPriorityGet(), vTaskPrioritySet(), NULL for self-reference, task states (READY vs BLOCKED), strcmp() returns 0 for match
-- 🔄 Day 4: Inter-Task Communication (Queues) (IN PROGRESS)
-  - ⬜ Exercise 1: Producer-Consumer Pattern
-  - ⬜ Exercise 2: Sending Structs via Queue
+- ✅ Day 4: Inter-Task Communication (Queues) (COMPLETED)
+  - ✅ Exercise 1: Producer-Consumer Pattern (integers via queue)
+  - ✅ Exercise 2: Sending Structs via Queue (sensor data simulation)
+  - **Key Learnings:** typedef struct with _t convention, designated initializers vs field assignment in C++, struct memory padding/alignment, sizeof() for queue item size, %lu format specifier for uint32_t, queue data copying vs pointer sharing
 - ⬜ Day 5: Semaphores & Mutexes
 - ⬜ Day 6-7: Practice Project: Multi-Task LED Controller
 
@@ -231,22 +232,70 @@
 
 ---
 
-#### Day 4: Queues - Inter-Task Communication (🔄 In Progress)
-**Date:** December 22, 2025  
-**Time Spent:** _______________  
-**Status:** In Progress (0/2 exercises completed)
+#### Day 4: Queues - Inter-Task Communication (✅ Completed)
+**Date:** December 26, 2025  
+**Time Spent:** ~2 hours  
+**Status:** Completed
 
-**What I'm Learning:**
-- Producer-Consumer design pattern
-- Queue-based inter-task communication
-- Data copying vs pointer sharing
+**What I Learned:**
+- **Producer-Consumer pattern** - Fundamental embedded design pattern for decoupling tasks
+- Queue data copying mechanism - Queues COPY data, not store pointers
+- **typedef struct** syntax and embedded C naming conventions (_t suffix)
+- Struct memory padding and alignment for CPU efficiency
+- sizeof() importance - never hardcode struct sizes due to padding
+- C++ vs C initialization differences (designated initializers require C++20, field assignment works always)
+- **Format specifiers:** %lu for uint32_t, not %u (platform-dependent)
+- QueueHandle_t is already void* - no & needed when passing as parameter
 
 **Exercises Completed:**
-- [ ] Exercise 1: Producer-Consumer Pattern (integers)
-- [ ] Exercise 2: Sending Structs via Queue
+- [x] Exercise 1: Producer-Consumer Pattern (integers via queue)
+- [x] Exercise 2: Sending Structs via Queue (sensor data with timestamp, ID, value)
+
+**Challenges Faced:**
+- Initial syntax error with C-style aggregate initialization in C++ context
+- Double multiplication bug in logging (multiplied timestamp twice)
+- Format specifier issue (%u vs %lu for uint32_t)
+- Understanding when to use & with handles (QueueHandle_t vs TaskHandle_t)
+- Copy-paste error in consumer log ("Sending" instead of "Received")
+
+**Key Concepts Mastered:**
+- Producer-Consumer pattern for rate-decoupling (fast producer, slow consumer or vice versa)
+- Why queues copy data (safety, independence, no shared memory issues)
+- Struct definition with typedef (cleaner syntax, matches FreeRTOS conventions)
+- Designated initializers vs field assignment in C++
+- Struct memory layout: [timestamp: 4B][sensor_id: 1B][padding: 3B][value: 4B] = 12B not 9B
+- xQueueCreate(length, sizeof(struct)) - proper queue initialization
+- xQueueSend(&data) and xQueueReceive(&buffer) - both need addresses
+
+**C Concepts Learned:**
+- **typedef struct pattern** - Creating clean type aliases
+- **Struct padding/alignment** - CPU efficiency vs memory waste tradeoff
+- **sizeof() operator** - Compile-time size calculation including padding
+- **Designated initializers** - .field = value syntax (C++20)
+- **Field assignment** - struct.field = value (always works)
+- **Format specifiers** - Platform-specific integer types need proper formatting
+
+**Design Pattern Recognition:**
+- Producer-Consumer with queue buffer enables:
+  * Sensor reading at fixed rate → variable processing time
+  * UART asynchronous data → synchronous parsing
+  * Button instant events → delayed action handling
+  * Burst data capture → smooth processing flow
+
+**Questions Answered:**
+- ✅ Why copy data instead of pointers? (Task independence, memory safety, no race conditions)
+- ✅ How to size a queue? (Consider burst capacity and processing time lag)
+- ✅ What's portMAX_DELAY vs 0? (Block forever vs immediate return)
+- ✅ Why use sizeof() not hardcoded size? (Padding makes actual size unpredictable)
+- ✅ Can I use onboard ADC for sensor data? (Yes, but Day 13 - keep simulated for now to focus on queue mechanics)
 
 **Notes:**
-- Starting fundamental embedded communication pattern
+- Strong understanding of queue mechanics and struct handling
+- Good debugging of C++ vs C syntax differences
+- Pattern thinking emerging - recognizing where Producer-Consumer applies
+- Ready for synchronization primitives (semaphores, mutexes)
+
+---
 
 ---
 

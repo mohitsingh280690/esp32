@@ -8,3 +8,5 @@ build/
 *.pyc
 __pycache__/
 *.pdf
+nmea_pcb_current_surge_log*.txt
+plot.py
