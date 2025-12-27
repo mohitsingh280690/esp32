@@ -1,18 +1,27 @@
 /**
- * Day 5 - Exercise 2: Mutex for Shared Resource Protection
+ * Day 5 - Exercise 2: Mutex for Shared UART (Real-World Example)
  *
- * CHALLENGE: Demonstrate race conditions and fix them with mutex
+ * CHALLENGE: See why UART/Serial printing needs mutex protection
+ *
+ * THE PROBLEM:
+ * Multiple tasks printing to serial monitor simultaneously will produce
+ * GARBLED, INTERLEAVED output that's impossible to read.
+ *
+ * Example WITHOUT mutex:
+ * Task TaTasskkk A121 :c: ocuonuttne:r c=o u10n2t5e3r = 1024
+ * 
+ * Example WITH mutex:
+ * Task A: counter = 1025
+ * Task B: counter = 1026
  *
  * REQUIREMENTS:
- * ✅ Create a shared counter variable
- * ✅ Two tasks incrementing the counter 1000 times each
- * ✅ WITHOUT mutex: Observe race condition (final count < 2000)
- * ✅ WITH mutex: Observe correct behavior (final count = 2000)
+ * ✅ Create multiple tasks printing multi-line messages
+ * ✅ WITHOUT mutex: Observe garbled output
+ * ✅ WITH mutex: Observe clean, readable output
  *
- * FUNCTIONS YOU'LL NEED:
- * - xSemaphoreCreateMutex() - Create mutex
- * - xSemaphoreTake(mutex, portMAX_DELAY) - Lock (acquire mutex)
- * - xSemaphoreGive(mutex) - Unlock (release mutex)
+ * REAL-WORLD USE CASE:
+ * This is EXACTLY why ESP_LOGI uses internal mutexes!
+ * Any time multiple tasks share a resource (UART, SPI, I2C), you need mutex
  *
  * C CONCEPTS TO LEARN:
  *
@@ -113,70 +122,44 @@
 #include "freertos/semphr.h"
 #include "esp_log.h"
 
-static const char *TAG = "MutexDemo";
+static const char *TAG = "UARTMutex";
 
-// TODO: Declare shared counter variable (try without volatile first)
-int shared_counter = 0;
+// Mutex to protect UART writes
+SemaphoreHandle_t uartMutex = NULL;
 
-// TODO: Declare mutex handle
-SemaphoreHandle_t counterMutex = NULL;
+// Flag to enable/disable mutex
+bool use_mutex = false;  // Start FALSE to see garbled output!
 
-// Flag to enable/disable mutex (for demonstration)
-bool use_mutex = false;  // Start FALSE to see race condition!
-
-void incrementTask(void *pvParameter)
+// We'll use raw printf to bypass ESP_LOGI's built-in mutex
+void printTask(void *pvParameter)
 {
     const char *taskName = (const char *)pvParameter;
-    
-    for (int i = 0; i < 1000; i++)
-    {
-        // TODO: If use_mutex is true, lock the mutex here
-        if (use_mutex) {
-            xSemaphoreTake(counterMutex, portMAX_DELAY);
-        }
-        
-        // Critical section - reading and modifying shared variable
-        shared_counter++;
-        
-        // TODO: If use_mutex is true, unlock the mutex here
-        if (use_mutex) {
-            xSemaphoreGive(counterMutex);
-        }
-        
-        // Small delay to increase chance of context switch (makes race condition visible)
-        vTaskDelay(pdMS_TO_TICKS(1));
-    }
-    
-    ESP_LOGI(taskName, "Finished 1000 increments");
-    
-    // Task deletes itself when done
-    vTaskDelete(NULL);
-}
-
-void monitorTask(void *pvParameter)
-{
-    const char *TAG = "Monitor";
-    vTaskDelay(pdMS_TO_TICKS(2000));  // Wait for tasks to start
+    int counter = 0;
     
     while (1)
     {
-        ESP_LOGI(TAG, "Current counter value: %d", shared_counter);
-        vTaskDelay(pdMS_TO_TICKS(500));
-        
-        // Check if both increment tasks are done
-        if (uxTaskGetNumberOfTasks() <= 2)  // Only monitor task and idle task left
-        {
-            ESP_LOGI(TAG, "=====================================");
-            ESP_LOGI(TAG, "FINAL COUNTER: %d (expected: 2000)", shared_counter);
-            if (shared_counter == 2000) {
-                ESP_LOGI(TAG, "✅ SUCCESS - No race condition!");
-            } else {
-                ESP_LOGW(TAG, "❌ RACE CONDITION - Lost %d increments!", 2000 - shared_counter);
-                ESP_LOGW(TAG, "Set use_mutex=true and rerun to fix.");
-            }
-            ESP_LOGI(TAG, "=====================================");
-            vTaskDelete(NULL);  // Monitor done
+        // TODO: If use_mutex is true, lock the mutex here
+        if (use_mutex) {
+            xSemaphoreTake(uartMutex, portMAX_DELAY);
         }
+        
+        // Critical section - multi-line UART output
+        // Without mutex, these lines will interleave with other tasks!
+        printf("====================================");
+        printf("\n");
+        printf("%s is printing...", taskName);
+        printf("\n");
+        printf("Counter value: %d", counter++);
+        printf("\n");
+        printf("====================================");
+        printf("\n\n");
+        
+        // TODO: If use_mutex is true, unlock the mutex here
+        if (use_mutex) {
+            xSemaphoreGive(uartMutex);
+        }
+        
+        vTaskDelay(pdMS_TO_TICKS(100));  // Small delay between prints
     }
 }
 
@@ -185,20 +168,24 @@ extern "C" void app_main(void)
     esp_log_level_set("*", ESP_LOG_INFO);
 
     ESP_LOGI(TAG, "=====================================");
-    ESP_LOGI(TAG, "Day 5 - Exercise 2: Mutex Demo");
+    ESP_LOGI(TAG, "Day 5 - Exercise 2: UART Mutex Demo");
     ESP_LOGI(TAG, "use_mutex = %s", use_mutex ? "TRUE" : "FALSE");
     ESP_LOGI(TAG, "=====================================");
+    ESP_LOGI(TAG, "Watch the output below...");
+    ESP_LOGI(TAG, "");
 
-    // TODO: Create mutex (even if not using yet)
-    counterMutex = xSemaphoreCreateMutex();
+    // Create mutex
+    uartMutex = xSemaphoreCreateMutex();
     
-    // Create two tasks that will increment the counter
-    xTaskCreate(incrementTask, "Task1", 2048, (void *)"Task1", 5, NULL);
-    xTaskCreate(incrementTask, "Task2", 2048, (void *)"Task2", 5, NULL);
+    // Create multiple tasks that print to UART
+    // All pinned to same core to ensure interleaving
+    xTaskCreatePinnedToCore(printTask, "TaskA", 2048, (void *)"[TASK-A]", 5, NULL, 0);
+    xTaskCreatePinnedToCore(printTask, "TaskB", 2048, (void *)"[TASK-B]", 5, NULL, 0);
+    xTaskCreatePinnedToCore(printTask, "TaskC", 2048, (void *)"[TASK-C]", 5, NULL, 0);
     
-    // Create monitor task to observe the counter
-    xTaskCreate(monitorTask, "Monitor", 2048, NULL, 3, NULL);
-    
-    // TODO: First run with use_mutex = false to see race condition
-    // TODO: Then change use_mutex = true and observe correct behavior
+    // INSTRUCTIONS:
+    // 1. First run with use_mutex = false
+    //    → You'll see garbled, unreadable output
+    // 2. Then change use_mutex = true and rebuild
+    //    → Clean, separated output blocks
 }

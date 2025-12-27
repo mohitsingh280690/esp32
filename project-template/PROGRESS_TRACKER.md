@@ -29,14 +29,14 @@
 
 **Current Week:** Week 1  
 **Current Day:** Day 5  
-**Current Challenge:** Day 5, Exercise 2 (Mutex Race Condition Demo) - IN PROGRESS
-**Overall Progress:** 4.5/28 days (16%)
+**Current Challenge:** Day 5 Complete - Ready for Week 1 Review
+**Overall Progress:** 5/28 days (18%)
 
 ---
 
 ## Weekly Progress
 
-### 🔵 Week 1: FreeRTOS Fundamentals (4/7 days completed)
+### 🔵 Week 1: FreeRTOS Fundamentals (5/7 days completed)
 - ✅ Day 1: ESP-IDF vs Arduino, Build System (COMPLETED)
   - ✅ Setup Verification: LED Blink
   - ✅ Exercise 3: ESP Logging Levels (4 log levels, counter, modulo operator)
@@ -53,9 +53,9 @@
   - ✅ Exercise 1: Producer-Consumer Pattern (integers via queue)
   - ✅ Exercise 2: Sending Structs via Queue (sensor data simulation)
   - **Key Learnings:** typedef struct with _t convention, designated initializers vs field assignment in C++, struct memory padding/alignment, sizeof() for queue item size, %lu format specifier for uint32_t, queue data copying vs pointer sharing
-- 🔄 Day 5: Semaphores & Mutexes (IN PROGRESS)
+- ✅ Day 5: Semaphores & Mutexes (COMPLETED)
   - ✅ Exercise 1: Binary Semaphore for Event Signaling
-  - ⬜ Exercise 2: Mutex Race Condition Demonstration
+  - ✅ Exercise 2: Mutex for UART Protection (Garbled Output Demo)
 - ⬜ Day 6-7: Practice Project: Multi-Task LED Controller
 
 ### ⬜ Week 2: Hardware Peripherals (0/7 days)
@@ -296,6 +296,101 @@
 - Good debugging of C++ vs C syntax differences
 - Pattern thinking emerging - recognizing where Producer-Consumer applies
 - Ready for synchronization primitives (semaphores, mutexes)
+
+---
+
+#### Day 5: Semaphores & Mutexes (✅ Completed)
+**Date:** December 27, 2025  
+**Time Spent:** ~2 hours  
+**Status:** Completed
+
+**What I Learned:**
+- Binary semaphores for task synchronization and event signaling
+- Difference between binary semaphore and mutex (ownership vs signaling)
+- Mutex = specialized binary semaphore with ownership and priority inheritance
+- Why mutexes prevent priority inversion
+- Real-world mutex use case: Protecting shared UART output
+- printf() is NOT thread-safe without protection
+- ESP_LOGI has built-in mutex (that's why it's safe!)
+
+**Key Understanding:**
+- **Binary Semaphore:** No ownership, any task can give/take, ISR-safe, used for signaling
+- **Mutex:** Has ownership, only taker can give, NOT ISR-safe, has priority inheritance
+- **Critical Pattern:** Mutex protects MULTI-LINE operations (like UART printing)
+- **Race condition visibility:** Multiple tasks printing creates GARBLED interleaved output
+- **Why counter increment is hard to break:** Modern CPUs, compiler optimization, task pinning needed
+- **Better demonstration:** UART output garbling is IMMEDIATELY visible and educational
+
+**Functions Mastered:**
+- `xSemaphoreCreateBinary()` - Create binary semaphore (starts empty)
+- `xSemaphoreCreateMutex()` - Create mutex (starts available)
+- `xSemaphoreTake(sem, timeout)` - Acquire semaphore/mutex (blocks if unavailable)
+- `xSemaphoreGive(sem)` - Release semaphore/mutex
+- `xSemaphoreGiveFromISR()` - ISR-safe semaphore give (semaphore only, not mutex!)
+- `taskYIELD()` - Voluntary context switch
+- `xTaskCreatePinnedToCore()` - Pin task to specific CPU core
+
+**Exercises Completed:**
+- [x] Exercise 1: Binary Semaphore - Button ISR signals task to toggle LED
+- [x] Exercise 2: Mutex - Protecting UART from garbled multi-task output
+
+**Challenges Faced:**
+- Initial counter race condition didn't manifest (timing luck, compiler optimization)
+- Tried multiple approaches: removing delay, explicit read-modify-write, taskYIELD()
+- ESP32 dual-core behavior: tasks on different cores don't context-switch, run truly parallel
+- **Solution:** Changed to UART garbling demo - MUCH better visual demonstration
+- Race conditions are intermittent and hardware/timing dependent (that's what makes them dangerous!)
+
+**Key Concepts Mastered:**
+- **Guard/Mutex Protection Pattern:** Ensuring atomic multi-step operations
+- **When to use mutex vs semaphore:**
+  * Mutex: Protecting shared resources (UART, SPI, I2C, shared variables)
+  * Binary Semaphore: Task-to-task signaling, ISR-to-task events
+- **Why printf() needs mutex:** Multi-line output interleaves character-by-character without protection
+- **Priority Inheritance:** Prevents priority inversion bug (high-priority task waiting on low-priority)
+- **Ownership semantics:** Only the task that took mutex can give it back
+- **ISR limitations:** Cannot use mutex from ISR (no blocking allowed in interrupt context)
+
+**C Concepts Learned:**
+- **volatile keyword:** Prevents compiler optimization, ensures memory read (BUT doesn't prevent race conditions!)
+- **Atomic operations:** Most operations are NOT atomic (even counter++)
+- **Read-Modify-Write hazard:** temp = counter; temp++; counter = temp; (three separate steps)
+- **Context switches during critical sections:** Cause lost updates
+- **taskYIELD():** Explicit voluntary context switch (for testing)
+
+**Design Pattern Recognition:**
+- **Resource Protection Pattern:** Mutex around critical sections
+  * UART writes from multiple tasks
+  * SPI bus transactions
+  * I2C device access
+  * Shared data structure modification
+  * Non-reentrant library calls
+- **Event Signaling Pattern:** Binary semaphore for coordination
+  * ISR signals task (button press, timer, sensor ready)
+  * Task-to-task handoff (producer done → consumer can start)
+  * Wait for resource available
+
+**Real-World Applications Discussed:**
+- ESP_LOGI/ESP_LOGW internally use mutex (that's why they're thread-safe!)
+- Raw printf() does NOT have mutex - needs manual protection
+- SPI/I2C drivers have internal mutexes for multi-task access
+- UART driver has mutex for thread-safe writing
+
+**Questions Answered:**
+- ✅ Is mutex a kind of semaphore? (Conceptually yes, but distinct primitive with ownership)
+- ✅ Why didn't counter race condition show up? (Timing, optimization, dual-core parallelism)
+- ✅ What's better way to demonstrate mutex? (UART garbling - immediate visual feedback!)
+- ✅ Can binary semaphore replace mutex? (Technically yes, but loses ownership safety)
+- ✅ Why can't mutex be used from ISR? (Blocking not allowed in interrupt context)
+- ✅ What's priority inversion? (High task waits for low task holding mutex, blocked by medium task)
+
+**Notes:**
+- Excellent persistence in trying to trigger race condition (showed deep understanding of timing issues)
+- Recognized original exercise limitation and requested better demonstration
+- UART garbling demo provides immediate visual feedback (much better teaching tool)
+- Strong grasp of when to use mutex vs semaphore
+- Understanding of ownership semantics and priority inheritance
+- Ready for more advanced synchronization (counting semaphores, event groups)
 
 ---
 
