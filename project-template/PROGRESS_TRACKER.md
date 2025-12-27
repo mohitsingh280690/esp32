@@ -29,8 +29,8 @@
 
 **Current Week:** Week 1  
 **Current Day:** Day 5  
-**Current Challenge:** Day 5, Exercise 1 (Semaphores & Resource Management) - READY TO START
-**Overall Progress:** 4/28 days (14%)
+**Current Challenge:** Day 5, Exercise 2 (Mutex Race Condition Demo) - IN PROGRESS
+**Overall Progress:** 4.5/28 days (16%)
 
 ---
 
@@ -53,7 +53,9 @@
   - ✅ Exercise 1: Producer-Consumer Pattern (integers via queue)
   - ✅ Exercise 2: Sending Structs via Queue (sensor data simulation)
   - **Key Learnings:** typedef struct with _t convention, designated initializers vs field assignment in C++, struct memory padding/alignment, sizeof() for queue item size, %lu format specifier for uint32_t, queue data copying vs pointer sharing
-- ⬜ Day 5: Semaphores & Mutexes
+- 🔄 Day 5: Semaphores & Mutexes (IN PROGRESS)
+  - ✅ Exercise 1: Binary Semaphore for Event Signaling
+  - ⬜ Exercise 2: Mutex Race Condition Demonstration
 - ⬜ Day 6-7: Practice Project: Multi-Task LED Controller
 
 ### ⬜ Week 2: Hardware Peripherals (0/7 days)
@@ -294,6 +296,39 @@
 - Good debugging of C++ vs C syntax differences
 - Pattern thinking emerging - recognizing where Producer-Consumer applies
 - Ready for synchronization primitives (semaphores, mutexes)
+
+---
+
+#### Day 5: Semaphores & Mutexes (🔄 In Progress)
+**Date:** December 27, 2025  
+**Time Spent:** ~1 hour (so far)  
+**Status:** Exercise 1 Complete, Exercise 2 In Progress
+
+**What I'm Learning:**
+- **Binary semaphores** - Event signaling without data
+- **Mutexes** - Protecting shared resources from race conditions
+- Difference between coordination (semaphore) and protection (mutex)
+
+**Exercises Completed:**
+- [x] Exercise 1: Binary Semaphore for Event Signaling
+- [ ] Exercise 2: Mutex Race Condition Demonstration
+
+**Key Concepts from Exercise 1:**
+- Semaphores signal EVENTS (not data like queues)
+- Binary semaphore = flag (0 or 1)
+- xSemaphoreGive() raises flag, xSemaphoreTake() lowers it
+- Task blocks efficiently on Take (zero CPU) until someone Give()s
+- Used for: Button → Action, Data ready → Process, ISR → Task
+
+**Exercise 2 Goal:**
+- Demonstrate race condition with shared counter
+- Run WITHOUT mutex: See lost increments (count < 2000)
+- Run WITH mutex: See correct behavior (count = 2000)
+- Understand why volatile doesn't fix race conditions
+
+**Notes:**
+- Semaphores vs Queues now clear - events vs data
+- Ready to see race conditions in action
 
 ---
 

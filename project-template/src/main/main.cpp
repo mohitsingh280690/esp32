@@ -1,91 +1,110 @@
 /**
- * Day 5 - Exercise 1: Binary Semaphore for Signaling
+ * Day 5 - Exercise 2: Mutex for Shared Resource Protection
  *
- * CHALLENGE: Use semaphores to coordinate tasks
+ * CHALLENGE: Demonstrate race conditions and fix them with mutex
  *
  * REQUIREMENTS:
- * ✅ Create a binary semaphore for task coordination
- * ✅ Producer task: Sends semaphore signal every 2 seconds
- * ✅ Consumer task: Waits for semaphore, then performs action
- * ✅ Log when signal is given and received
+ * ✅ Create a shared counter variable
+ * ✅ Two tasks incrementing the counter 1000 times each
+ * ✅ WITHOUT mutex: Observe race condition (final count < 2000)
+ * ✅ WITH mutex: Observe correct behavior (final count = 2000)
  *
  * FUNCTIONS YOU'LL NEED:
- * - xSemaphoreCreateBinary() - Create binary semaphore
- * - xSemaphoreGive(semaphore) - Signal the semaphore
- * - xSemaphoreTake(semaphore, timeout) - Wait for semaphore
+ * - xSemaphoreCreateMutex() - Create mutex
+ * - xSemaphoreTake(mutex, portMAX_DELAY) - Lock (acquire mutex)
+ * - xSemaphoreGive(mutex) - Unlock (release mutex)
  *
  * C CONCEPTS TO LEARN:
  *
- * Semaphores vs Queues - What's the Difference?
- * ----------------------------------------------
- * QUEUE: Passes DATA between tasks
- * - xQueueSend() copies your data into queue
- * - xQueueReceive() copies data out
- * - Use for: Sensor readings, commands, packets
+ * Race Conditions - The Hidden Bug
+ * ---------------------------------
+ * counter++;  // Looks atomic, but it's NOT!
  *
- * SEMAPHORE: Signals EVENTS, no data
- * - xSemaphoreGive() sets flag (count = 1)
- * - xSemaphoreTake() clears flag (count = 0)
- * - Use for: "Something happened!", "Resource available", "Go!"
+ * Actually 3 operations:
+ * 1. Read counter from memory → register
+ * 2. Add 1 to register
+ * 3. Write register → memory
  *
- * Binary Semaphore States:
- * - Count = 0: Not available (task will block on Take)
- * - Count = 1: Available (task can Take immediately)
+ * What happens with 2 tasks:
+ * Task A: Read counter=5 → Add 1 → (context switch)
+ * Task B: Read counter=5 → Add 1 → Write 6
+ * Task A: (resume) → Write 6  ← LOST Task B's increment!
  *
- * Think of it like a flag:
- * - Give() raises the flag
- * - Take() lowers the flag and proceeds
- * - If flag is down, Take() waits until someone raises it
+ * Result: Expected 2 increments (5→7), got 1 increment (5→6)
  *
- * DESIGN PATTERN: Event Signaling
- * --------------------------------
- * One of the most common synchronization patterns!
+ * Mutex - Mutual Exclusion Lock
+ * ------------------------------
+ * Ensures only ONE task in critical section at a time.
+ *
+ * Pattern:
+ * xSemaphoreTake(mutex, portMAX_DELAY);  // Lock
+ * counter++;  // Critical section - safe now!
+ * xSemaphoreGive(mutex);  // Unlock
+ *
+ * DESIGN PATTERN: Guard / Mutex Protection
+ * ------------------------------------------
+ * Protect shared resources from concurrent access.
  *
  * Problem it solves:
- * - Task B needs to wait for Task A to finish something
- * - Task needs to wait for external event (button, sensor, timer)
- * - Deferred interrupt handling (ISR → Task)
+ * - Multiple tasks reading/writing same variable
+ * - Hardware peripherals (UART, SPI, I2C) shared between tasks
+ * - Data structures modified by multiple tasks
+ * - Non-atomic operations that must complete
  *
  * Classic use cases:
- * - Button press → Action task
- * - Data ready → Processing task
- * - Timer expired → Periodic task
- * - Hardware interrupt → Handler task
+ * - Shared counter/statistics
+ * - UART/Serial.print() from multiple tasks
+ * - SPI bus with multiple devices
+ * - Linked list or queue manipulation
  *
- * Without semaphore (BAD):
- * - Polling: while(!flag) { vTaskDelay(10); }  ← Wastes CPU!
- * - Global flag with race conditions
- * - Busy-wait loops
+ * Without mutex (BAD):
+ * - Race conditions
+ * - Lost updates
+ * - Corrupted data structures
+ * - Unpredictable behavior
  *
- * With semaphore (GOOD):
- * - Task blocks efficiently (zero CPU usage)
- * - OS wakes task immediately when signaled
- * - Clean, race-free coordination
+ * With mutex (GOOD):
+ * - One task at a time
+ * - All operations complete
+ * - Predictable, correct behavior
  *
- * SemaphoreHandle_t - Another Handle Type
- * ----------------------------------------
- * Like TaskHandle_t and QueueHandle_t:
- * - Opaque pointer to semaphore object
- * - Must be initialized before use
- * - Pass to Give/Take functions
- * - Can be shared between tasks
+ * Mutex = Special Type of Semaphore
+ * -----------------------------------
+ * Technically, mutex uses SemaphoreHandle_t type.
+ * FreeRTOS mutexes have priority inheritance (prevents priority inversion).
  *
  * Example:
- * SemaphoreHandle_t mySemaphore;
- * mySemaphore = xSemaphoreCreateBinary();
- *               ^--- Returns handle or NULL on failure
+ * SemaphoreHandle_t myMutex;
+ * myMutex = xSemaphoreCreateMutex();
+ *           ^--- Returns handle or NULL on failure
+ *
+ * volatile Keyword - Does It Help?
+ * --------------------------------
+ * volatile int counter;  ← Still has race conditions!
+ *
+ * volatile means:
+ * - Always read from memory (don't cache in register)
+ * - Compiler won't optimize away reads
+ *
+ * volatile does NOT:
+ * - Make operations atomic
+ * - Prevent race conditions
+ * - Replace mutex
+ *
+ * Use volatile for:
+ * - Hardware registers (memory-mapped I/O)
+ * - ISR-modified variables
+ * - Variables modified by other cores/DMA
+ *
+ * Use mutex for:
+ * - Protecting shared data between tasks
  *
  * CRITICAL THINKING QUESTIONS:
- * - Why use semaphore instead of a global flag variable?
- * - What happens if you Give() twice without Take()?
- * - Binary semaphore vs counting semaphore - what's the difference?
- * - Can multiple tasks wait on the same semaphore?
- * - What happens if you Take() but no one ever Give()s?
- *
- * TIMEOUT VALUES:
- * - portMAX_DELAY = Wait forever
- * - 0 = Check and return immediately (non-blocking)
- * - pdMS_TO_TICKS(5000) = Wait up to 5 seconds
+ * - Run WITHOUT mutex first - what final count do you get? Why not 2000?
+ * - Does adding 'volatile' to counter fix the race condition? Why not?
+ * - What if Task A holds mutex and gets suspended - what happens to Task B?
+ * - Can you use the same mutex to protect multiple variables?
+ * - What's the performance cost of using mutex?
  */
 
 #include <stdio.h>
@@ -94,42 +113,70 @@
 #include "freertos/semphr.h"
 #include "esp_log.h"
 
-static const char *TAG = "SemaphoreDemo";
+static const char *TAG = "MutexDemo";
 
-// TODO: Declare a SemaphoreHandle_t variable to store the semaphore handle
+// TODO: Declare shared counter variable (try without volatile first)
+int shared_counter = 0;
 
+// TODO: Declare mutex handle
+SemaphoreHandle_t counterMutex = NULL;
 
-void signalerTask(void *pvParameter)
+// Flag to enable/disable mutex (for demonstration)
+bool use_mutex = false;  // Start FALSE to see race condition!
+
+void incrementTask(void *pvParameter)
 {
-    // TODO: Cast parameter to SemaphoreHandle_t
-    // TODO: Create a local TAG for this task's logs
+    const char *taskName = (const char *)pvParameter;
     
-    // TODO: Implement signaler logic
-    // Every 2 seconds:
-    // 1. Log that you're about to signal
-    // 2. Give the semaphore using xSemaphoreGive()
-    // 3. Delay 2000ms
-    
-    while (1)
+    for (int i = 0; i < 1000; i++)
     {
-        // Your code here
+        // TODO: If use_mutex is true, lock the mutex here
+        if (use_mutex) {
+            xSemaphoreTake(counterMutex, portMAX_DELAY);
+        }
         
-        vTaskDelay(pdMS_TO_TICKS(2000));
+        // Critical section - reading and modifying shared variable
+        shared_counter++;
+        
+        // TODO: If use_mutex is true, unlock the mutex here
+        if (use_mutex) {
+            xSemaphoreGive(counterMutex);
+        }
+        
+        // Small delay to increase chance of context switch (makes race condition visible)
+        vTaskDelay(pdMS_TO_TICKS(1));
     }
+    
+    ESP_LOGI(taskName, "Finished 1000 increments");
+    
+    // Task deletes itself when done
+    vTaskDelete(NULL);
 }
 
-void waiterTask(void *pvParameter)
+void monitorTask(void *pvParameter)
 {
-    // TODO: Cast parameter to SemaphoreHandle_t
-    // TODO: Create a local TAG for this task's logs
+    const char *TAG = "Monitor";
+    vTaskDelay(pdMS_TO_TICKS(2000));  // Wait for tasks to start
     
     while (1)
     {
-        // TODO: Wait for semaphore using xSemaphoreTake()
-        // Use portMAX_DELAY to wait forever
+        ESP_LOGI(TAG, "Current counter value: %d", shared_counter);
+        vTaskDelay(pdMS_TO_TICKS(500));
         
-        // TODO: When you receive the signal, log a message
-        // Maybe do some action (simulate work with a delay)
+        // Check if both increment tasks are done
+        if (uxTaskGetNumberOfTasks() <= 2)  // Only monitor task and idle task left
+        {
+            ESP_LOGI(TAG, "=====================================");
+            ESP_LOGI(TAG, "FINAL COUNTER: %d (expected: 2000)", shared_counter);
+            if (shared_counter == 2000) {
+                ESP_LOGI(TAG, "✅ SUCCESS - No race condition!");
+            } else {
+                ESP_LOGW(TAG, "❌ RACE CONDITION - Lost %d increments!", 2000 - shared_counter);
+                ESP_LOGW(TAG, "Set use_mutex=true and rerun to fix.");
+            }
+            ESP_LOGI(TAG, "=====================================");
+            vTaskDelete(NULL);  // Monitor done
+        }
     }
 }
 
@@ -137,14 +184,21 @@ extern "C" void app_main(void)
 {
     esp_log_level_set("*", ESP_LOG_INFO);
 
-    ESP_LOGI(TAG, "=================================");
-    ESP_LOGI(TAG, "Day 5 - Exercise 1: Binary Semaphore");
-    ESP_LOGI(TAG, "=================================");
+    ESP_LOGI(TAG, "=====================================");
+    ESP_LOGI(TAG, "Day 5 - Exercise 2: Mutex Demo");
+    ESP_LOGI(TAG, "use_mutex = %s", use_mutex ? "TRUE" : "FALSE");
+    ESP_LOGI(TAG, "=====================================");
 
-    // TODO: Create the binary semaphore
-    // Hint: mySemaphore = xSemaphoreCreateBinary();
+    // TODO: Create mutex (even if not using yet)
+    counterMutex = xSemaphoreCreateMutex();
     
-    // TODO: Create signaler task (pass semaphore handle as parameter)
+    // Create two tasks that will increment the counter
+    xTaskCreate(incrementTask, "Task1", 2048, (void *)"Task1", 5, NULL);
+    xTaskCreate(incrementTask, "Task2", 2048, (void *)"Task2", 5, NULL);
     
-    // TODO: Create waiter task (pass semaphore handle as parameter)
+    // Create monitor task to observe the counter
+    xTaskCreate(monitorTask, "Monitor", 2048, NULL, 3, NULL);
+    
+    // TODO: First run with use_mutex = false to see race condition
+    // TODO: Then change use_mutex = true and observe correct behavior
 }
