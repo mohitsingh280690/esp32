@@ -100,7 +100,7 @@
  * 2. Structs for Commands:
  *    typedef struct {
  *        enum Pattern pattern;
- *        uint32_t speed_ms;
+ *        uint32_t g_speed_ms;
  *    } command_t;
  *
  * 3. Arrays for LED Pins:
@@ -207,8 +207,23 @@
 #include "esp_random.h"
 
 gpio_num_t LED[4] = {(gpio_num_t)4, (gpio_num_t)16, (gpio_num_t)17, (gpio_num_t)5};
-
+gpio_num_t BUTTON = (gpio_num_t)15;
 static const char *TAG = "LEDController";
+uint16_t g_speed_ms=400;
+QueueHandle_t g_patternQueue=NULL;
+
+
+void buttonTask(void * pvParameter){
+QueueHandle_t qHandle = (QueueHandle_t)pvParameter;
+
+    while(1){
+        if(gpio_get_level(BUTTON) == 1){
+            ESP_LOGI("BUTTON_TASK", "BUTTON PRESSED");
+            
+        }
+        vTaskDelay(pdMS_TO_TICKS(200));
+    }
+}
 
 // TODO: Define your data structures here
 // Hint: enum for patterns, struct for commands, array for LED pins
@@ -223,11 +238,7 @@ static const char *TAG = "LEDController";
 int knightRider(void)
 {
     // Initialize LEDs as outputs
-    for (int i = 0; i < 4; i++)
-    {
-        gpio_reset_pin(LED[i]);
-        gpio_set_direction(LED[i], GPIO_MODE_OUTPUT);
-    }
+
 
     static int pos = 0;       // Current LED position (0-3)
     static int direction = 1; // 1 = forward, -1 = backward
@@ -247,7 +258,7 @@ int knightRider(void)
         direction = -direction;
     }
 
-    vTaskDelay(pdMS_TO_TICKS(100));
+    vTaskDelay(pdMS_TO_TICKS(g_speed_ms));
     return 0;
 }
 
@@ -257,18 +268,14 @@ int blinkAll(void)
 {
     static bool ON_OFF = 0;
 
-    for (int i = 0; i < 4; i++)
-    {
-        gpio_reset_pin(LED[i]);
-        gpio_set_direction(LED[i], GPIO_MODE_OUTPUT);
-    }
+
     for (int i = 0; i < 4; i++)
     {
         gpio_set_level(LED[i], (ON_OFF) ? 0 : 1);
     }
 
     ON_OFF = !ON_OFF;
-    vTaskDelay(pdMS_TO_TICKS(400));
+    vTaskDelay(pdMS_TO_TICKS(g_speed_ms));
     return 0;
 }
 //  * Pattern 2 - Alternating Pairs:
@@ -277,11 +284,7 @@ int blinkAll(void)
 
 int alternatingPair(void){
     static bool pairNumber=0;
-    for (int i = 0; i < 4; i++)
-    {
-        gpio_reset_pin(LED[i]);
-        gpio_set_direction(LED[i], GPIO_MODE_OUTPUT);
-    }
+
 
     if(pairNumber==0){
     gpio_set_level(LED[0], 0);
@@ -296,7 +299,7 @@ int alternatingPair(void){
     }
 
     pairNumber = !pairNumber;
-    vTaskDelay(pdMS_TO_TICKS(400));
+    vTaskDelay(pdMS_TO_TICKS(g_speed_ms));
     return 0;
 }
 
@@ -305,11 +308,10 @@ int alternatingPair(void){
 int randomPattern(void){
     for (int i = 0; i < 4; i++)
     {
-        gpio_reset_pin(LED[i]);
-        gpio_set_direction(LED[i], GPIO_MODE_OUTPUT);
+ 
         gpio_set_level(LED[i],rand()%2);
     }
-    vTaskDelay(pdMS_TO_TICKS(200));
+    vTaskDelay(pdMS_TO_TICKS(g_speed_ms));
 return 0;
 }
 // TODO: Task 1 - Pattern Sequencer
@@ -318,10 +320,10 @@ void patternSequencer(void *pvParameter)
 {
     while (1)
     {
-        // knightRider();
+        knightRider();
         // blinkAll();
         // alternatingPair();
-        randomPattern();
+        // randomPattern();
     }
 }
 // TODO: Task 2 - Button Handler
@@ -338,9 +340,16 @@ extern "C" void app_main(void)
     ESP_LOGI(TAG, "===========================================");
     ESP_LOGI(TAG, "Multi-Task LED Controller - Practice Project");
     ESP_LOGI(TAG, "===========================================");
+    g_patternQueue = xQueueCreate(10,sizeof(int));
 
-    // TODO: Initialize hardware (GPIOs)
-
+    for (int i = 0; i < 4; i++)
+    {
+        gpio_reset_pin(LED[i]);
+        gpio_set_direction(LED[i], GPIO_MODE_OUTPUT);
+    }
+    gpio_reset_pin(BUTTON);
+    gpio_set_direction(BUTTON,GPIO_MODE_INPUT);
+    gpio_pulldown_en(BUTTON);
     // TODO: Create synchronization objects (queues, mutex)
 
     // TODO: Create tasks with appropriate priorities
@@ -348,5 +357,6 @@ extern "C" void app_main(void)
     ESP_LOGI(TAG, "System initialized. Tasks running...");
     ESP_LOGI(TAG, "Commands: pattern <0-3>, speed <50-1000>, status");
 
-    xTaskCreate(patternSequencer, "pattern", 2048, NULL, 5, NULL);
+    xTaskCreate(patternSequencer, "pattern", 2048, g_patternQueue, 5, NULL);
+    xTaskCreate(buttonTask, "buttonTask", 2048, g_patternQueue, 5, NULL);
 }
