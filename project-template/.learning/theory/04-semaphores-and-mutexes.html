@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Semaphores and Mutexes - ESP32 Tutorial</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            padding: 40px;
+            border-radius: 10px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        }
+        h1 {
+            color: #2c3e50;
+            border-bottom: 3px solid #667eea;
+            padding-bottom: 10px;
+        }
+        h2 {
+            color: #34495e;
+            margin-top: 30px;
+            border-left: 4px solid #667eea;
+            padding-left: 15px;
+        }
+        h3 {
+            color: #555;
+            margin-top: 25px;
+        }
+        .concept-box {
+            background: #f8f9fa;
+            border-left: 4px solid #3498db;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+        .warning-box {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+        .danger-box {
+            background: #f8d7da;
+            border-left: 4px solid #dc3545;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+        .success-box {
+            background: #d4edda;
+            border-left: 4px solid #28a745;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+        .code-block {
+            background: #2d2d2d;
+            color: #f8f8f2;
+            padding: 20px;
+            border-radius: 5px;
+            font-family: 'Courier New', Consolas, Monaco, monospace;
+            font-size: 13px;
+            line-height: 1.5;
+            overflow-x: auto;
+            margin: 15px 0;
+        }
+        .keyword { color: #ff79c6; }
+        .function { color: #50fa7b; }
+        .string { color: #f1fa8c; }
+        .comment { color: #6272a4; }
+        .type { color: #8be9fd; }
+        .number { color: #bd93f9; }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+        th {
+            background-color: #667eea;
+            color: white;
+        }
+        tr:nth-child(even) {
+            background-color: #f2f2f2;
+        }
+        .thinking-question {
+            background: #e7f3ff;
+            border-left: 4px solid #2196F3;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+        .thinking-question strong {
+            color: #1976D2;
+        }
+        .answer {
+            margin-top: 10px;
+            padding: 10px;
+            background: white;
+            border-radius: 3px;
+            font-style: italic;
+        }
+        .pattern-box {
+            background: #f0f7ff;
+            border: 2px solid #4a90e2;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+        }
+        .pattern-box h3 {
+            color: #4a90e2;
+            margin-top: 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔒 Day 5: Semaphores and Mutexes</h1>
+        
+        <div class="concept-box">
+            <h3>📋 What You'll Learn</h3>
+            <ul>
+                <li><strong>Race Conditions:</strong> The hidden bug in concurrent systems</li>
+                <li><strong>Mutexes:</strong> Mutual exclusion locks for protecting shared resources</li>
+                <li><strong>Semaphores:</strong> Signaling and resource counting mechanisms</li>
+                <li><strong>Critical Sections:</strong> Code that must run atomically</li>
+                <li><strong>Guard Pattern:</strong> Professional resource protection technique</li>
+            </ul>
+        </div>
+
+        <h2>🐛 The Problem: Race Conditions</h2>
+        
+        <div class="danger-box">
+            <h3>What is a Race Condition?</h3>
+            <p>A <strong>race condition</strong> occurs when multiple tasks access shared data concurrently, and the final result depends on the <em>timing</em> of their execution. This leads to unpredictable, incorrect behavior.</p>
+        </div>
+
+        <div class="mermaid">
+        sequenceDiagram
+            participant TaskA
+            participant Memory
+            participant TaskB
+            
+            Note over Memory: counter = 5
+            TaskA->>Memory: Read counter (5)
+            Note over TaskA: Increment to 6
+            TaskB->>Memory: Read counter (5)
+            Note over TaskB: Increment to 6
+            TaskB->>Memory: Write 6
+            TaskA->>Memory: Write 6
+            Note over Memory: Result = 6 (Expected 7!)
+            Note over TaskA,TaskB: Lost Update - Task B's work disappeared!
+        </div>
+
+        <h3>Why Simple Operations Aren't Atomic</h3>
+        
+        <p>This innocent-looking code has a race condition:</p>
+        
+        <div class="code-block"><span class="type">int</span> counter = <span class="number">0</span>;
+
+<span class="type">void</span> <span class="function">task</span>(<span class="type">void</span> *params) {
+    <span class="keyword">while</span>(<span class="number">1</span>) {
+        counter++;  <span class="comment">// Looks atomic, but it's NOT!</span>
+        <span class="function">vTaskDelay</span>(<span class="function">pdMS_TO_TICKS</span>(<span class="number">100</span>));
+    }
+}</div>
+
+        <p>At the assembly level, <code>counter++</code> is actually <strong>three operations</strong>:</p>
+
+        <div class="code-block"><span class="comment">// What counter++ actually does:</span>
+<span class="number">1.</span> <span class="type">LDR</span> r0, [counter]   <span class="comment">// Load counter from memory into register</span>
+<span class="number">2.</span> <span class="type">ADD</span> r0, r0, #<span class="number">1</span>       <span class="comment">// Increment register value</span>
+<span class="number">3.</span> <span class="type">STR</span> r0, [counter]   <span class="comment">// Store register back to memory</span></div>
+
+        <div class="warning-box">
+            <h4>⚡ Context Switch Can Happen Between ANY Instructions</h4>
+            <p>If Task A is preempted after step 1 or 2, Task B can read the old value. When Task A resumes, it writes its stale value, overwriting Task B's update. This is called a <strong>lost update</strong>.</p>
+        </div>
+
+        <h2>🔐 The Solution: Mutexes</h2>
+        
+        <div class="concept-box">
+            <h3>What is a Mutex?</h3>
+            <p><strong>Mutex</strong> = <strong>Mut</strong>ual <strong>Ex</strong>clusion Lock</p>
+            <p>A mutex ensures that only <strong>one task at a time</strong> can execute a critical section of code. It's like a bathroom key - only one person can hold it at a time.</p>
+        </div>
+
+        <div class="mermaid">
+        graph TD
+            A[Task A arrives] --> B{Mutex Available?}
+            B -->|Yes| C[Lock Mutex]
+            B -->|No| D[Wait in Queue]
+            C --> E[Execute Critical Section]
+            E --> F[Unlock Mutex]
+            F --> G[Task B gets mutex]
+            D --> G
+            G --> H[Task B locks & executes]
+        </div>
+
+        <h3>Creating and Using Mutexes</h3>
+
+        <div class="code-block"><span class="comment">// 1. Declare mutex handle</span>
+<span class="type">SemaphoreHandle_t</span> myMutex;
+
+<span class="comment">// 2. Create mutex (in app_main)</span>
+myMutex = <span class="function">xSemaphoreCreateMutex</span>();
+<span class="keyword">if</span> (myMutex == <span class="keyword">NULL</span>) {
+    <span class="comment">// Failed to create mutex - handle error</span>
+    <span class="function">ESP_LOGE</span>(<span class="string">"TAG"</span>, <span class="string">"Mutex creation failed!"</span>);
+}
+
+<span class="comment">// 3. Protect critical section</span>
+<span class="type">void</span> <span class="function">task</span>(<span class="type">void</span> *params) {
+    <span class="keyword">while</span>(<span class="number">1</span>) {
+        <span class="comment">// Lock mutex - wait forever if needed</span>
+        <span class="function">xSemaphoreTake</span>(myMutex, portMAX_DELAY);
+        
+        <span class="comment">// ===== CRITICAL SECTION =====</span>
+        <span class="comment">// Only one task can be here at a time</span>
+        counter++;
+        <span class="function">printf</span>(<span class="string">"Counter: %d\n"</span>, counter);
+        <span class="comment">// ===== END CRITICAL SECTION =====</span>
+        
+        <span class="comment">// Unlock mutex - let other tasks proceed</span>
+        <span class="function">xSemaphoreGive</span>(myMutex);
+        
+        <span class="function">vTaskDelay</span>(<span class="function">pdMS_TO_TICKS</span>(<span class="number">100</span>));
+    }
+}</div>
+
+        <h3>Mutex API Reference</h3>
+        
+        <table>
+            <tr>
+                <th>Function</th>
+                <th>Purpose</th>
+                <th>Returns</th>
+            </tr>
+            <tr>
+                <td><code>xSemaphoreCreateMutex()</code></td>
+                <td>Creates a new mutex</td>
+                <td>Handle or NULL on failure</td>
+            </tr>
+            <tr>
+                <td><code>xSemaphoreTake(mutex, timeout)</code></td>
+                <td>Lock mutex (wait if taken)</td>
+                <td>pdTRUE if acquired, pdFALSE if timeout</td>
+            </tr>
+            <tr>
+                <td><code>xSemaphoreGive(mutex)</code></td>
+                <td>Unlock mutex</td>
+                <td>pdTRUE if successful</td>
+            </tr>
+        </table>
+
+        <h2>🚦 Semaphores: Beyond Mutexes</h2>
+
+        <div class="concept-box">
+            <h3>What is a Semaphore?</h3>
+            <p>A <strong>semaphore</strong> is a signaling mechanism. Unlike mutexes (which protect resources), semaphores <em>coordinate</em> between tasks.</p>
+            <ul>
+                <li><strong>Binary Semaphore:</strong> Like a flag (0 or 1) - used for signaling</li>
+                <li><strong>Counting Semaphore:</strong> Tracks resource availability (0 to N)</li>
+            </ul>
+        </div>
+
+        <h3>Binary Semaphore: Task Synchronization</h3>
+        
+        <p>Use binary semaphores when one task needs to signal another:</p>
+
+        <div class="code-block"><span class="comment">// Create binary semaphore (starts at 0)</span>
+<span class="type">SemaphoreHandle_t</span> eventSemaphore;
+eventSemaphore = <span class="function">xSemaphoreCreateBinary</span>();
+
+<span class="comment">// Task 1: Wait for event</span>
+<span class="type">void</span> <span class="function">waitingTask</span>(<span class="type">void</span> *params) {
+    <span class="keyword">while</span>(<span class="number">1</span>) {
+        <span class="comment">// Block until semaphore is given</span>
+        <span class="function">xSemaphoreTake</span>(eventSemaphore, portMAX_DELAY);
+        <span class="function">ESP_LOGI</span>(<span class="string">"WAIT"</span>, <span class="string">"Event received!"</span>);
+    }
+}
+
+<span class="comment">// Task 2: Signal event</span>
+<span class="type">void</span> <span class="function">signalingTask</span>(<span class="type">void</span> *params) {
+    <span class="keyword">while</span>(<span class="number">1</span>) {
+        <span class="function">vTaskDelay</span>(<span class="function">pdMS_TO_TICKS</span>(<span class="number">2000</span>));
+        <span class="function">ESP_LOGI</span>(<span class="string">"SIGNAL"</span>, <span class="string">"Sending event..."</span>);
+        <span class="function">xSemaphoreGive</span>(eventSemaphore);  <span class="comment">// Wake up waiting task</span>
+    }
+}</div>
+
+        <div class="mermaid">
+        sequenceDiagram
+            participant TaskA as Task A (Waiting)
+            participant Sem as Binary Semaphore
+            participant TaskB as Task B (Signaling)
+            
+            Note over Sem: Count = 0
+            TaskA->>Sem: xSemaphoreTake()
+            Note over TaskA: BLOCKED (waiting)
+            TaskB->>Sem: xSemaphoreGive()
+            Note over Sem: Count = 1
+            Sem->>TaskA: Unblock!
+            Note over TaskA: Resumes execution
+            Note over Sem: Count = 0
+        </div>
+
+        <h3>Counting Semaphore: Resource Pool</h3>
+        
+        <p>Use counting semaphores to manage limited resources:</p>
+
+        <div class="code-block"><span class="comment">// Example: 3 UART ports available</span>
+<span class="type">SemaphoreHandle_t</span> uartPoolSemaphore;
+uartPoolSemaphore = <span class="function">xSemaphoreCreateCounting</span>(<span class="number">3</span>, <span class="number">3</span>);
+<span class="comment">//                                        ^ max   ^ initial</span>
+
+<span class="type">void</span> <span class="function">task</span>(<span class="type">void</span> *params) {
+    <span class="keyword">while</span>(<span class="number">1</span>) {
+        <span class="comment">// Try to acquire a UART port</span>
+        <span class="keyword">if</span> (<span class="function">xSemaphoreTake</span>(uartPoolSemaphore, <span class="function">pdMS_TO_TICKS</span>(<span class="number">1000</span>))) {
+            <span class="function">ESP_LOGI</span>(<span class="string">"UART"</span>, <span class="string">"Got UART port!"</span>);
+            
+            <span class="comment">// Use UART...</span>
+            <span class="function">vTaskDelay</span>(<span class="function">pdMS_TO_TICKS</span>(<span class="number">500</span>));
+            
+            <span class="comment">// Release UART port back to pool</span>
+            <span class="function">xSemaphoreGive</span>(uartPoolSemaphore);
+        } <span class="keyword">else</span> {
+            <span class="function">ESP_LOGW</span>(<span class="string">"UART"</span>, <span class="string">"No UART available!"</span>);
+        }
+    }
+}</div>
+
+        <h2>🎨 Design Pattern: Guard / RAII</h2>
+        
+        <div class="pattern-box">
+            <h3>🏛️ The Guard Pattern</h3>
+            <p><strong>Intent:</strong> Protect shared resources from concurrent access by ensuring mutual exclusion.</p>
+            
+            <p><strong>Problem it solves:</strong></p>
+            <ul>
+                <li>Multiple tasks accessing shared variables</li>
+                <li>Hardware peripherals (UART, SPI, I2C) shared between tasks</li>
+                <li>Non-atomic operations that must complete</li>
+                <li>Data structure corruption from concurrent modifications</li>
+            </ul>
+            
+            <p><strong>Solution:</strong> Use a mutex to serialize access to the protected resource.</p>
+        </div>
+
+        <h3>Classic Use Cases</h3>
+
+        <div class="code-block"><span class="comment">// 1. Protecting Shared Counter</span>
+<span class="type">int</span> shared_counter = <span class="number">0</span>;
+<span class="type">SemaphoreHandle_t</span> counterMutex;
+
+<span class="type">void</span> <span class="function">increment_safe</span>() {
+    <span class="function">xSemaphoreTake</span>(counterMutex, portMAX_DELAY);
+    shared_counter++;  <span class="comment">// Safe now!</span>
+    <span class="function">xSemaphoreGive</span>(counterMutex);
+}
+
+<span class="comment">// 2. Protecting UART Output</span>
+<span class="type">SemaphoreHandle_t</span> uartMutex;
+
+<span class="type">void</span> <span class="function">print_multi_line</span>(<span class="keyword">const</span> <span class="type">char</span> *msg) {
+    <span class="function">xSemaphoreTake</span>(uartMutex, portMAX_DELAY);
+    <span class="function">printf</span>(<span class="string">"====================\n"</span>);
+    <span class="function">printf</span>(<span class="string">"%s\n"</span>, msg);
+    <span class="function">printf</span>(<span class="string">"====================\n"</span>);
+    <span class="function">xSemaphoreGive</span>(uartMutex);
+}
+
+<span class="comment">// 3. Protecting SPI Bus</span>
+<span class="type">SemaphoreHandle_t</span> spiBusMutex;
+
+<span class="type">void</span> <span class="function">spi_transfer</span>(<span class="type">uint8_t</span> *data, <span class="type">size_t</span> len) {
+    <span class="function">xSemaphoreTake</span>(spiBusMutex, portMAX_DELAY);
+    
+    <span class="comment">// Configure CS pin</span>
+    <span class="comment">// Perform SPI transaction</span>
+    <span class="comment">// Deassert CS pin</span>
+    
+    <span class="function">xSemaphoreGive</span>(spiBusMutex);
+}</div>
+
+        <h2>⚠️ Common Pitfalls</h2>
+
+        <div class="danger-box">
+            <h4>1. Forgetting to Give Semaphore</h4>
+            <div class="code-block"><span class="comment">// ❌ BAD - Mutex never released!</span>
+<span class="function">xSemaphoreTake</span>(mutex, portMAX_DELAY);
+<span class="keyword">if</span> (error_condition) {
+    <span class="keyword">return</span>;  <span class="comment">// DEADLOCK! Never released mutex</span>
+}
+<span class="function">xSemaphoreGive</span>(mutex);</div>
+
+            <div class="code-block"><span class="comment">// ✅ GOOD - Always release, even on error</span>
+<span class="function">xSemaphoreTake</span>(mutex, portMAX_DELAY);
+<span class="keyword">if</span> (error_condition) {
+    <span class="function">xSemaphoreGive</span>(mutex);
+    <span class="keyword">return</span>;
+}
+<span class="function">xSemaphoreGive</span>(mutex);</div>
+        </div>
+
+        <div class="danger-box">
+            <h4>2. Deadlock from Nested Locks</h4>
+            <div class="code-block"><span class="comment">// Task A:                    Task B:</span>
+<span class="function">xSemaphoreTake</span>(mutexA, ...);  <span class="function">xSemaphoreTake</span>(mutexB, ...);
+<span class="function">xSemaphoreTake</span>(mutexB, ...);  <span class="function">xSemaphoreTake</span>(mutexA, ...);
+<span class="comment">// ❌ DEADLOCK! Each holds one lock and waits for the other</span></div>
+
+            <p><strong>Solution:</strong> Always acquire locks in the same order across all tasks.</p>
+        </div>
+
+        <div class="warning-box">
+            <h4>3. Using Mutex from ISR</h4>
+            <p><strong>❌ NEVER use mutexes from interrupt handlers!</strong></p>
+            <p>ISRs cannot block. Use binary semaphores with <code>xSemaphoreGiveFromISR()</code> instead.</p>
+        </div>
+
+        <div class="warning-box">
+            <h4>4. Holding Mutex Too Long</h4>
+            <div class="code-block"><span class="comment">// ❌ BAD - Blocks other tasks unnecessarily</span>
+<span class="function">xSemaphoreTake</span>(mutex, portMAX_DELAY);
+<span class="function">vTaskDelay</span>(<span class="function">pdMS_TO_TICKS</span>(<span class="number">1000</span>));  <span class="comment">// Holding lock while sleeping!</span>
+counter++;
+<span class="function">xSemaphoreGive</span>(mutex);</div>
+
+            <div class="code-block"><span class="comment">// ✅ GOOD - Only hold lock for critical section</span>
+<span class="function">vTaskDelay</span>(<span class="function">pdMS_TO_TICKS</span>(<span class="number">1000</span>));
+<span class="function">xSemaphoreTake</span>(mutex, portMAX_DELAY);
+counter++;
+<span class="function">xSemaphoreGive</span>(mutex);</div>
+        </div>
+
+        <h2>🤔 Critical Thinking Questions</h2>
+
+        <div class="thinking-question">
+            <strong>Q1: Does the <code>volatile</code> keyword prevent race conditions?</strong>
+            <div class="answer">
+                <strong>Answer:</strong> No! <code>volatile</code> tells the compiler to always read from memory (don't cache in registers), but it does NOT make operations atomic. You still need a mutex.
+                <br><br>
+                <code>volatile</code> is for:
+                <ul>
+                    <li>Hardware registers (memory-mapped I/O)</li>
+                    <li>ISR-modified variables</li>
+                    <li>Variables modified by other cores/DMA</li>
+                </ul>
+                Use <strong>mutex</strong> for protecting shared data between tasks.
+            </div>
+        </div>
+
+        <div class="thinking-question">
+            <strong>Q2: What happens if a high-priority task is blocked waiting for a mutex held by a low-priority task?</strong>
+            <div class="answer">
+                <strong>Answer:</strong> This is called <strong>priority inversion</strong>. FreeRTOS mutexes implement <strong>priority inheritance</strong> - the low-priority task temporarily inherits the high-priority task's priority while holding the mutex, ensuring it completes quickly.
+                <br><br>
+                This is why you should use <code>xSemaphoreCreateMutex()</code> instead of binary semaphores for resource protection.
+            </div>
+        </div>
+
+        <div class="thinking-question">
+            <strong>Q3: Can you use the same mutex to protect multiple unrelated variables?</strong>
+            <div class="answer">
+                <strong>Answer:</strong> Yes, but it's not ideal. If variables are truly independent, using one mutex creates unnecessary contention - tasks that only need variable A must wait if another task is accessing variable B.
+                <br><br>
+                <strong>Best practice:</strong> Use separate mutexes for independent resources. Use one mutex for related data that should be modified atomically together (e.g., coordinates x and y).
+            </div>
+        </div>
+
+        <div class="thinking-question">
+            <strong>Q4: Why didn't we see garbled UART output in the exercise?</strong>
+            <div class="answer">
+                <strong>Answer:</strong> Several reasons:
+                <ul>
+                    <li><strong>ESP-IDF UART driver:</strong> May have internal buffering/locking</li>
+                    <li><strong>Hardware buffering:</strong> UART FIFO queues output bytes</li>
+                    <li><strong>Timing alignment:</strong> Tasks may complete output before switching</li>
+                    <li><strong>Core assignment:</strong> Tasks on same core with delays might serialize naturally</li>
+                </ul>
+                In practice, race conditions are <strong>non-deterministic</strong> - they may not always appear! This makes them dangerous bugs to track down. Always protect shared resources even if you don't immediately see problems.
+            </div>
+        </div>
+
+        <div class="thinking-question">
+            <strong>Q5: What's the performance cost of using mutexes?</strong>
+            <div class="answer">
+                <strong>Answer:</strong> Mutexes have overhead:
+                <ul>
+                    <li><strong>Context switch:</strong> If mutex is taken, requesting task blocks and scheduler runs</li>
+                    <li><strong>System call:</strong> Take/Give are RTOS functions with overhead</li>
+                    <li><strong>Contention:</strong> Tasks wait instead of executing</li>
+                </ul>
+                <br>
+                <strong>Optimization tips:</strong>
+                <ul>
+                    <li>Keep critical sections SHORT</li>
+                    <li>Don't call blocking functions while holding mutex</li>
+                    <li>Use task notifications for simple signaling (faster than semaphores)</li>
+                    <li>Consider lock-free algorithms for high-performance scenarios</li>
+                </ul>
+            </div>
+        </div>
+
+        <h2>📊 Mutex vs Semaphore: When to Use What</h2>
+
+        <table>
+            <tr>
+                <th>Aspect</th>
+                <th>Mutex</th>
+                <th>Binary Semaphore</th>
+                <th>Counting Semaphore</th>
+            </tr>
+            <tr>
+                <td><strong>Purpose</strong></td>
+                <td>Resource protection</td>
+                <td>Task synchronization</td>
+                <td>Resource pool management</td>
+            </tr>
+            <tr>
+                <td><strong>Ownership</strong></td>
+                <td>Task that takes must give</td>
+                <td>Any task can give</td>
+                <td>Any task can give</td>
+            </tr>
+            <tr>
+                <td><strong>Priority Inheritance</strong></td>
+                <td>✅ Yes</td>
+                <td>❌ No</td>
+                <td>❌ No</td>
+            </tr>
+            <tr>
+                <td><strong>Use from ISR</strong></td>
+                <td>❌ No</td>
+                <td>✅ Yes (GiveFromISR)</td>
+                <td>✅ Yes (GiveFromISR)</td>
+            </tr>
+            <tr>
+                <td><strong>Initial State</strong></td>
+                <td>Available (count=1)</td>
+                <td>Not available (count=0)</td>
+                <td>Available (count=N)</td>
+            </tr>
+            <tr>
+                <td><strong>Example</strong></td>
+                <td>Protecting shared counter</td>
+                <td>ISR signaling task</td>
+                <td>3 available UART ports</td>
+            </tr>
+        </table>
+
+        <h2>🎯 Best Practices</h2>
+
+        <div class="success-box">
+            <h4>✅ Do This:</h4>
+            <ul>
+                <li>Always check if mutex creation succeeded (<code>!= NULL</code>)</li>
+                <li>Keep critical sections as SHORT as possible</li>
+                <li>Always pair <code>xSemaphoreTake</code> with <code>xSemaphoreGive</code></li>
+                <li>Use mutexes for resource protection (not binary semaphores)</li>
+                <li>Document which mutex protects which data</li>
+                <li>Acquire multiple mutexes in consistent order across tasks</li>
+            </ul>
+        </div>
+
+        <div class="danger-box">
+            <h4>❌ Don't Do This:</h4>
+            <ul>
+                <li>Never call blocking functions while holding a mutex</li>
+                <li>Never use mutexes from ISRs</li>
+                <li>Never hold mutex across delays or long operations</li>
+                <li>Never forget to give semaphore on error paths</li>
+                <li>Never assume operations are atomic without verification</li>
+            </ul>
+        </div>
+
+        <h2>🚀 What's Next: Day 6+</h2>
+
+        <p>Now that you understand synchronization primitives, you're ready for:</p>
+        <ul>
+            <li><strong>Software Timers:</strong> Execute code at intervals without dedicated tasks</li>
+            <li><strong>Interrupts & ISRs:</strong> Respond to hardware events immediately</li>
+            <li><strong>Event Groups:</strong> Wait for multiple conditions simultaneously</li>
+            <li><strong>Task Notifications:</strong> Faster, lighter weight signaling</li>
+            <li><strong>Real-world projects:</strong> Combining all concepts</li>
+        </ul>
+
+        <div class="success-box">
+            <h3>🎓 Key Takeaways</h3>
+            <ul>
+                <li><strong>Race conditions are real:</strong> Even simple operations like <code>counter++</code> aren't atomic</li>
+                <li><strong>Mutexes serialize access:</strong> Only one task in critical section at a time</li>
+                <li><strong>Semaphores coordinate tasks:</strong> Binary for signaling, counting for resource pools</li>
+                <li><strong>Guard pattern is fundamental:</strong> Professional embedded code always protects shared resources</li>
+                <li><strong>Non-deterministic bugs are dangerous:</strong> Always use synchronization even if you don't see immediate problems</li>
+            </ul>
+        </div>
+
+    </div>
+
+    <script>
+        mermaid.initialize({ startOnLoad: true, theme: 'default' });
+    </script>
+</body>
+</html>

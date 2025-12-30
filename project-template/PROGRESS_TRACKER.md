@@ -28,9 +28,9 @@
 ## Current Status
 
 **Current Week:** Week 1  
-**Current Day:** Day 5  
-**Current Challenge:** Day 5 Complete - Ready for Week 1 Review
-**Overall Progress:** 5/28 days (18%)
+**Current Day:** Days 6-7 (Practice Project)  
+**Current Challenge:** Multi-Task LED Controller - Consolidating Week 1 Concepts
+**Overall Progress:** 5/28 days (18%) - Ready for Practice Project
 
 ---
 
@@ -56,7 +56,9 @@
 - ✅ Day 5: Semaphores & Mutexes (COMPLETED)
   - ✅ Exercise 1: Binary Semaphore for Event Signaling
   - ✅ Exercise 2: Mutex for UART Protection (Garbled Output Demo)
-- ⬜ Day 6-7: Practice Project: Multi-Task LED Controller
+  - ✅ Theory Document: .learning/theory/04-semaphores-and-mutexes.html
+  - **Key Learnings:** Race conditions, mutex vs semaphore, Guard pattern, priority inheritance, volatile doesn't prevent races, UART buffering can mask race conditions
+- ⬜ Day 6-7: Practice Project: Multi-Task LED Controller (NEXT)
 
 ### ⬜ Week 2: Hardware Peripherals (0/7 days)
 - ⬜ Day 8: GPIO Deep Dive
@@ -392,36 +394,67 @@
 - Understanding of ownership semantics and priority inheritance
 - Ready for more advanced synchronization (counting semaphores, event groups)
 
----
+---✅ Completed)
+**Date:** December 30, 2025  
+**Time Spent:** ~2.5 hours  
+**Status:** Completed - Both Exercises + Theory Documentation
 
-#### Day 5: Semaphores & Mutexes (🔄 In Progress)
-**Date:** December 27, 2025  
-**Time Spent:** ~1 hour (so far)  
-**Status:** Exercise 1 Complete, Exercise 2 In Progress
-
-**What I'm Learning:**
-- **Binary semaphores** - Event signaling without data
+**What I Learned:**
+- **Binary semaphores** - Event signaling without data transfer
 - **Mutexes** - Protecting shared resources from race conditions
-- Difference between coordination (semaphore) and protection (mutex)
+- **Race conditions** - Non-deterministic bugs from concurrent access
+- **Guard Pattern** - Professional resource protection technique
+- **Priority Inheritance** - Prevents priority inversion with mutexes
+- **Why UART garbling didn't always appear** - Hardware buffering, timing, core assignment
+- **volatile != thread-safe** - Prevents optimization but doesn't make operations atomic
 
 **Exercises Completed:**
 - [x] Exercise 1: Binary Semaphore for Event Signaling
-- [ ] Exercise 2: Mutex Race Condition Demonstration
+- [x] Exercise 2: Mutex for UART Protection (UART output demonstration)
 
-**Key Concepts from Exercise 1:**
+**Key Concepts Mastered:**
 - Semaphores signal EVENTS (not data like queues)
 - Binary semaphore = flag (0 or 1)
 - xSemaphoreGive() raises flag, xSemaphoreTake() lowers it
 - Task blocks efficiently on Take (zero CPU) until someone Give()s
-- Used for: Button → Action, Data ready → Process, ISR → Task
+- **Mutex vs Semaphore:**
+  * Mutex: Ownership, priority inheritance, resource protection
+  * Binary Semaphore: No ownership, ISR-safe, event signaling
+- **Critical Section Pattern:** Lock → Execute → Unlock
+- **Race conditions are non-deterministic** - May not always appear but still dangerous
 
-**Exercise 2 Goal:**
-- Demonstrate race condition with shared counter
-- Run WITHOUT mutex: See lost increments (count < 2000)
-- Run WITH mutex: See correct behavior (count = 2000)
-- Understand why volatile doesn't fix race conditions
+**Design Patterns Learned:**
+- **Guard/RAII Pattern** - Mutex protection of shared resources
+- **Producer-Consumer** (review) - Combined with queues from Day 4
+- **ISR Deferral Pattern** - ISR gives semaphore → Task processes
+
+**C Concepts Learned:**
+- `volatile` keyword - Prevents compiler optimization, NOT thread safety
+- Atomic operations - Most C operations are NOT atomic (even counter++)
+- Read-Modify-Write hazard in concurrent systems
+- Race condition at assembly level (LOAD, ADD, STORE sequence)
+
+**Real-World Applications:**
+- ESP_LOGI has built-in mutex (that's why it's thread-safe)
+- Raw printf() needs manual mutex protection
+- SPI/I2C/UART drivers use internal mutexes
+- Hardware peripherals are naturally singleton resources
+
+**Challenges Faced:**
+- UART garbling didn't manifest consistently (hardware buffering effects)
+- Understanding why race conditions are non-deterministic
+- Learned that "working code" doesn't mean "correct code" in concurrency
+
+**Theory Documentation:**
+- ✅ Created `.learning/theory/04-semaphores-and-mutexes.html`
+- Comprehensive coverage with Mermaid diagrams
+- Critical thinking questions with answers
+- Design patterns and best practices
 
 **Notes:**
+- Strong understanding of synchronization primitives
+- Ready for Week 1 consolidation practice project
+- Excellent foundation for advanced RTOS concepts
 - Semaphores vs Queues now clear - events vs data
 - Ready to see race conditions in action
 
