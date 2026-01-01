@@ -24,6 +24,7 @@ uint16_t g_speed_ms = 400;
 QueueHandle_t g_patternQueue = NULL;
 QueueHandle_t g_speedQueue = NULL;
 g_serialHandle sHandle;
+SemaphoreHandle_t g_uartMutex = NULL; // Protects UART/serial output
 
 char g_commandBuffer[32] = {0};
 
@@ -180,6 +181,7 @@ void serialTask(void *pvParameter)
                 }
                 else if (strcmp(cmd, "status") == 0)
                 {
+
                     ESP_LOGI("SERIALTASK", "Status requested");
                 }
             }
@@ -199,7 +201,12 @@ extern "C" void app_main(void)
     g_speedQueue = xQueueCreate(10, sizeof(int));
     sHandle.patternQHandle = g_patternQueue;
     sHandle.speedQHandle = g_speedQueue;
-
+    g_uartMutex = xSemaphoreCreateMutex();
+    if (g_uartMutex == NULL)
+    {
+        ESP_LOGE(TAG, "Failed to create UART mutex!");
+        return; // Cannot continue without mutex
+    }
     for (int i = 0; i < 4; i++)
     {
         gpio_reset_pin(LED[i]);
