@@ -1,0 +1,1484 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Week 1 Complete Refresher - ESP32 + FreeRTOS</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            padding: 40px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+
+        .content {
+            padding: 40px;
+        }
+
+        .nav-section {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+        }
+
+        .nav-section h2 {
+            color: #2a5298;
+            margin-bottom: 15px;
+        }
+
+        .nav-links {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 10px;
+        }
+
+        .nav-links a {
+            padding: 10px 15px;
+            background: white;
+            border: 2px solid #667eea;
+            border-radius: 5px;
+            text-decoration: none;
+            color: #2a5298;
+            text-align: center;
+            transition: all 0.3s;
+        }
+
+        .nav-links a:hover {
+            background: #667eea;
+            color: white;
+            transform: translateY(-2px);
+        }
+
+        .section {
+            margin-bottom: 40px;
+            padding: 30px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 5px solid #667eea;
+        }
+
+        .section h2 {
+            color: #2a5298;
+            font-size: 2em;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #667eea;
+        }
+
+        .section h3 {
+            color: #1e3c72;
+            font-size: 1.5em;
+            margin-top: 25px;
+            margin-bottom: 15px;
+        }
+
+        .section h4 {
+            color: #2a5298;
+            font-size: 1.2em;
+            margin-top: 20px;
+            margin-bottom: 10px;
+        }
+
+        .concept-box {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            border-left: 4px solid #667eea;
+        }
+
+        .concept-box.info {
+            border-left-color: #17a2b8;
+            background: #e7f5f7;
+        }
+
+        .concept-box.warning {
+            border-left-color: #ffc107;
+            background: #fff8e1;
+        }
+
+        .concept-box.success {
+            border-left-color: #28a745;
+            background: #e8f5e9;
+        }
+
+        .concept-box.danger {
+            border-left-color: #dc3545;
+            background: #fdecea;
+        }
+
+        .code-block {
+            background: #2d2d2d;
+            color: #f8f8f2;
+            padding: 20px;
+            border-radius: 5px;
+            font-family: 'Courier New', Consolas, Monaco, monospace;
+            font-size: 14px;
+            line-height: 1.5;
+            overflow-x: auto;
+            margin: 15px 0;
+            white-space: pre;
+        }
+
+        .code-inline {
+            background: #e8e8e8;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', Consolas, Monaco, monospace;
+            font-size: 0.9em;
+            color: #d63384;
+        }
+
+        .pattern-box {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+
+        .pattern-box h4 {
+            color: white;
+            margin-top: 0;
+        }
+
+        .comparison-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .comparison-table th {
+            background: #2a5298;
+            color: white;
+            padding: 15px;
+            text-align: left;
+        }
+
+        .comparison-table td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .comparison-table tr:hover {
+            background: #f5f5f5;
+        }
+
+        .key-points {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+
+        .key-points ul {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        .key-points li {
+            padding: 8px 0;
+            padding-left: 30px;
+            position: relative;
+        }
+
+        .key-points li:before {
+            content: "✓";
+            position: absolute;
+            left: 0;
+            color: #28a745;
+            font-weight: bold;
+            font-size: 1.2em;
+        }
+
+        .mermaid {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+
+        .footer {
+            background: #2a5298;
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+
+        @media print {
+            body {
+                background: white;
+            }
+            .container {
+                box-shadow: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 Week 1 Complete Refresher</h1>
+            <p>ESP32 + FreeRTOS Fundamentals | Days 1-7</p>
+            <p style="font-size: 0.9em; margin-top: 10px;">Master Review: Tasks, Queues, Semaphores, Mutexes</p>
+        </div>
+
+        <div class="content">
+            <!-- Navigation -->
+            <div class="nav-section">
+                <h2>Quick Navigation</h2>
+                <div class="nav-links">
+                    <a href="#day1">Day 1: ESP-IDF Basics</a>
+                    <a href="#day2">Day 2: Tasks</a>
+                    <a href="#day3">Day 3: Priorities</a>
+                    <a href="#day4">Day 4: Queues</a>
+                    <a href="#day5">Day 5: Semaphores</a>
+                    <a href="#day6-7">Days 6-7: Practice</a>
+                    <a href="#patterns">Design Patterns</a>
+                    <a href="#c-concepts">C Concepts</a>
+                </div>
+            </div>
+
+            <!-- Overview -->
+            <div class="section">
+                <h2>📋 Week 1 Overview</h2>
+                
+                <div class="mermaid">
+                graph TB
+                    A[Week 1: FreeRTOS Fundamentals] --> B[Day 1: ESP-IDF Setup]
+                    A --> C[Day 2: Tasks & Concurrency]
+                    A --> D[Day 3: Task Priorities]
+                    A --> E[Day 4: Queues]
+                    A --> F[Day 5: Semaphores & Mutexes]
+                    A --> G[Days 6-7: Practice Project]
+                    
+                    B --> B1[Logging System]
+                    B --> B2[Build System]
+                    
+                    C --> C1[Task Creation]
+                    C --> C2[Task Parameters]
+                    C --> C3[Static Variables]
+                    
+                    D --> D1[Priority Scheduling]
+                    D --> D2[TaskHandle_t]
+                    D --> D3[Dynamic Priority]
+                    
+                    E --> E1[Producer-Consumer]
+                    E --> E2[Data Structures]
+                    
+                    F --> F1[Binary Semaphore]
+                    F --> F2[Mutex Pattern]
+                    F --> F3[Race Conditions]
+                    
+                    G --> G1[Multi-Task LED System]
+                    G --> G2[4 Tasks Integration]
+                    G --> G3[Real-world Application]
+                    
+                    style A fill:#667eea,stroke:#333,stroke-width:3px,color:#fff
+                    style G fill:#28a745,stroke:#333,stroke-width:2px,color:#fff
+                </div>
+
+                <div class="concept-box success">
+                    <h4>What You've Accomplished</h4>
+                    <p><strong>18% Complete (5/28 days)</strong></p>
+                    <ul style="margin-left: 20px; margin-top: 10px;">
+                        <li>Mastered FreeRTOS task creation and management</li>
+                        <li>Implemented inter-task communication with queues</li>
+                        <li>Learned synchronization with semaphores and mutexes</li>
+                        <li>Built a complete multi-task LED controller system</li>
+                        <li>Deepened C programming knowledge (pointers, structs, volatile)</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Day 1 -->
+            <div class="section" id="day1">
+                <h2>Day 1: ESP-IDF vs Arduino - Build System Fundamentals</h2>
+
+                <h3>Key Concepts</h3>
+                <div class="concept-box info">
+                    <h4>ESP-IDF Framework</h4>
+                    <p>Professional embedded framework with full hardware control, RTOS support, and production-grade reliability. More verbose than Arduino but offers complete flexibility.</p>
+                </div>
+
+                <h4>Entry Point Difference</h4>
+                <div class="code-block">// Arduino
+void setup() {
+    pinMode(2, OUTPUT);
+}
+
+void loop() {
+    digitalWrite(2, HIGH);
+    delay(1000);
+}
+
+// ESP-IDF
+extern "C" void app_main(void) {
+    gpio_reset_pin(GPIO_NUM_2);
+    gpio_set_direction(GPIO_NUM_2, GPIO_MODE_OUTPUT);
+    
+    while(1) {
+        gpio_set_level(GPIO_NUM_2, 1);
+        vTaskDelay(pdMS_TO_TICKS(1000));
+    }
+}</div>
+
+                <h4>Critical C Concepts</h4>
+                <div class="concept-box warning">
+                    <h4>extern "C" Linkage</h4>
+                    <p><strong>Why needed?</strong> C++ mangles function names (adds type info). ESP-IDF linker expects C-style names.</p>
+                    <div class="code-block">// C++ compiler without extern "C":
+// app_main() becomes _Z8app_mainv (mangled)
+
+// With extern "C":
+extern "C" void app_main(void) {
+    // Linker finds "app_main" (not mangled)
+}</div>
+                </div>
+
+                <div class="concept-box info">
+                    <h4>Static Keyword - Two Uses</h4>
+                    <p><strong>1. File Scope (Private Global)</strong></p>
+                    <div class="code-block">static const char *TAG = "BLINK";
+// Only visible in this file, not other .cpp files</div>
+                    
+                    <p style="margin-top: 15px;"><strong>2. Persistent State in Functions</strong></p>
+                    <div class="code-block">void task(void *param) {
+    static int counter = 0;  // Initialized ONCE
+    counter++;               // Retains value between calls
+    ESP_LOGI(TAG, "Count: %d", counter);
+}</div>
+                </div>
+
+                <h4>ESP Logging System</h4>
+                <table class="comparison-table">
+                    <thead>
+                        <tr>
+                            <th>Level</th>
+                            <th>Function</th>
+                            <th>Use Case</th>
+                            <th>Color</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><span class="code-inline">ERROR</span></td>
+                            <td><span class="code-inline">ESP_LOGE(TAG, ...)</span></td>
+                            <td>Critical failures, system errors</td>
+                            <td>Red</td>
+                        </tr>
+                        <tr>
+                            <td><span class="code-inline">WARN</span></td>
+                            <td><span class="code-inline">ESP_LOGW(TAG, ...)</span></td>
+                            <td>Warnings, non-critical issues</td>
+                            <td>Yellow</td>
+                        </tr>
+                        <tr>
+                            <td><span class="code-inline">INFO</span></td>
+                            <td><span class="code-inline">ESP_LOGI(TAG, ...)</span></td>
+                            <td>Important events, state changes</td>
+                            <td>Green</td>
+                        </tr>
+                        <tr>
+                            <td><span class="code-inline">DEBUG</span></td>
+                            <td><span class="code-inline">ESP_LOGD(TAG, ...)</span></td>
+                            <td>Debugging information, verbose</td>
+                            <td>Default</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div class="key-points">
+                    <h4>Key Takeaways - Day 1</h4>
+                    <ul>
+                        <li>ESP-IDF gives direct hardware control vs Arduino abstractions</li>
+                        <li><span class="code-inline">extern "C"</span> required for <span class="code-inline">app_main()</span> linkage</li>
+                        <li><span class="code-inline">static</span> creates persistent state in functions</li>
+                        <li>ESP logging is thread-safe, Arduino Serial.print() is NOT</li>
+                        <li><span class="code-inline">vTaskDelay()</span> required to prevent watchdog resets</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Day 2 -->
+            <div class="section" id="day2">
+                <h2>Day 2: FreeRTOS Tasks - Concurrent Execution</h2>
+
+                <h3>What is a Task?</h3>
+                <div class="concept-box info">
+                    <p>A <strong>task</strong> is a lightweight thread with its own stack and execution context. ESP32's dual cores can run tasks truly in parallel.</p>
+                </div>
+
+                <div class="mermaid">
+                graph LR
+                    A[Task 1] -->|Stack 2KB| B[Core 0]
+                    C[Task 2] -->|Stack 2KB| D[Core 1]
+                    E[Task 3] -->|Stack 4KB| B
+                    
+                    B --> F[Scheduler]
+                    D --> F
+                    F --> G[Time Slicing]
+                    
+                    style F fill:#667eea,stroke:#333,stroke-width:2px,color:#fff
+                </div>
+
+                <h4>Task Creation Signature</h4>
+                <div class="code-block">BaseType_t xTaskCreate(
+    TaskFunction_t pvTaskCode,    // Function pointer: &my_task
+    const char * const pcName,    // Name string: "task1"
+    uint32_t usStackDepth,        // Stack size: 2048 (words)
+    void *pvParameters,           // Parameter: can be NULL or data pointer
+    UBaseType_t uxPriority,       // Priority: 0-25 (higher = more important)
+    TaskHandle_t *pxCreatedTask   // Handle: NULL or &task_handle
+);</div>
+
+                <h4>Task Function Pattern</h4>
+                <div class="code-block">void my_task(void *pvParameter) {
+    // Initialization (runs once)
+    ESP_LOGI("TASK", "Starting...");
+    
+    while(1) {  // MUST have infinite loop!
+        // Task work here
+        ESP_LOGI("TASK", "Running");
+        
+        // CRITICAL: Must yield CPU
+        vTaskDelay(pdMS_TO_TICKS(1000));
+    }
+    
+    // Never reached (unless vTaskDelete() called)
+}</div>
+
+                <div class="concept-box danger">
+                    <h4>⚠️ Watchdog Warning</h4>
+                    <p>Tasks MUST call <span class="code-inline">vTaskDelay()</span> or a blocking function. Without it, the watchdog timer will reset the system!</p>
+                    <div class="code-block">// BAD - System will crash!
+while(1) {
+    gpio_set_level(LED, 1);
+    // No delay = watchdog reset
+}
+
+// GOOD
+while(1) {
+    gpio_set_level(LED, 1);
+    vTaskDelay(pdMS_TO_TICKS(100));  // Yields CPU
+}</div>
+                </div>
+
+                <h3>C Concept: Function Pointers</h3>
+                <div class="concept-box info">
+                    <h4>Why <span class="code-inline">&task_function</span>?</h4>
+                    <p>Tasks need the <strong>address</strong> of your function, not a call to it.</p>
+                    <div class="code-block">void my_task(void *param) { }
+
+// Wrong: Calls the function NOW
+xTaskCreate(my_task(), "task", 2048, NULL, 5, NULL);
+
+// Right: Passes function ADDRESS
+xTaskCreate(&my_task, "task", 2048, NULL, 5, NULL);
+//          ^--- Address-of operator
+
+// Also valid (function names decay to pointers)
+xTaskCreate(my_task, "task", 2048, NULL, 5, NULL);</div>
+                </div>
+
+                <h3>Passing Parameters to Tasks</h3>
+                <div class="concept-box warning">
+                    <h4>void* - The Generic Pointer</h4>
+                    <p>Tasks use <span class="code-inline">void*</span> for parameters because it can hold ANY pointer type.</p>
+                    
+                    <div class="code-block">// Passing a simple integer VALUE
+int delay = 500;
+xTaskCreate(task, "name", 2048, (void*)delay, 5, NULL);
+//                                ^--- Cast int to void*
+
+// Inside task: Cast back to int
+void task(void *param) {
+    int my_delay = (int)param;  // Cast void* to int
+    vTaskDelay(pdMS_TO_TICKS(my_delay));
+}</div>
+
+                    <div class="code-block">// Passing a pointer to data
+int my_data = 42;
+xTaskCreate(task, "name", 2048, (void*)&my_data, 5, NULL);
+//                                       ^--- Address of variable
+
+// Inside task: Cast to int pointer, then dereference
+void task(void *param) {
+    int *ptr = (int*)param;    // Cast to int*
+    int value = *ptr;          // Dereference to get value
+    ESP_LOGI("TASK", "Value: %d", value);
+}</div>
+                </div>
+
+                <h3>Exercise: Passing Structs</h3>
+                <div class="concept-box success">
+                    <h4>Grouping Related Data</h4>
+                    <p>When you need multiple parameters, use a struct!</p>
+                    <div class="code-block">typedef struct {
+    int gpio_pin;
+    int delay_ms;
+    const char *name;
+} task_params_t;
+
+// Create struct instance
+task_params_t params = {
+    .gpio_pin = GPIO_NUM_2,
+    .delay_ms = 500,
+    .name = "LED1"
+};
+
+// Pass POINTER to struct
+xTaskCreate(blink_task, "blink", 2048, (void*)&params, 5, NULL);
+
+// Inside task
+void blink_task(void *pvParam) {
+    task_params_t *config = (task_params_t*)pvParam;
+    
+    ESP_LOGI("TASK", "Pin: %d, Delay: %d, Name: %s",
+             config->gpio_pin,   // Arrow operator for pointers
+             config->delay_ms,
+             config->name);
+}</div>
+                </div>
+
+                <div class="concept-box danger">
+                    <h4>⚠️ Memory Lifetime Warning</h4>
+                    <p>When passing struct pointers, ensure the struct outlives the task!</p>
+                    <div class="code-block">// BAD - Local variable destroyed after app_main exits
+void app_main() {
+    task_params_t params = {2, 500, "LED"};
+    xTaskCreate(task, "name", 2048, &params, 5, NULL);
+    // app_main exits, params destroyed, task has dangling pointer!
+}
+
+// GOOD - Global or static lifetime
+static task_params_t params = {2, 500, "LED"};
+
+void app_main() {
+    xTaskCreate(task, "name", 2048, &params, 5, NULL);
+    // params persists for entire program
+}
+
+// ALSO GOOD - Heap allocation
+void app_main() {
+    task_params_t *params = malloc(sizeof(task_params_t));
+    params->gpio_pin = 2;
+    xTaskCreate(task, "name", 2048, params, 5, NULL);
+    // Heap memory persists until free() called
+}</div>
+                </div>
+
+                <div class="key-points">
+                    <h4>Key Takeaways - Day 2</h4>
+                    <ul>
+                        <li>Tasks run concurrently, each with own stack (2048-4096 bytes typical)</li>
+                        <li>Function pointers: <span class="code-inline">&function</span> gives address</li>
+                        <li><span class="code-inline">void*</span> is generic pointer, requires casting</li>
+                        <li>Pass value: <span class="code-inline">(void*)42</span>, Pass pointer: <span class="code-inline">(void*)&var</span></li>
+                        <li>Structs group related parameters cleanly</li>
+                        <li>Memory lifetime critical: use static/global or heap for task parameters</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Day 3 -->
+            <div class="section" id="day3">
+                <h2>Day 3: Task Priorities & Scheduling</h2>
+
+                <h3>Priority Levels</h3>
+                <div class="concept-box info">
+                    <p>FreeRTOS uses <strong>preemptive priority-based scheduling</strong>. Higher priority tasks run first and can interrupt lower priority tasks.</p>
+                    <ul style="margin-left: 20px; margin-top: 10px;">
+                        <li><strong>Range:</strong> 0 (lowest) to 25 (highest) on ESP32</li>
+                        <li><strong>Preemption:</strong> Higher priority instantly preempts lower</li>
+                        <li><strong>Equal Priority:</strong> Time-slicing (round-robin)</li>
+                    </ul>
+                </div>
+
+                <div class="mermaid">
+                graph TD
+                    A[Task A: Priority 5] -->|Ready| B[Scheduler]
+                    C[Task B: Priority 3] -->|Ready| B
+                    D[Task C: Priority 3] -->|Ready| B
+                    
+                    B -->|Runs First| A
+                    B -->|If A blocks| E[B and C alternate]
+                    E -->|Time Slice| C
+                    E -->|Time Slice| D
+                    
+                    style A fill:#28a745,stroke:#333,stroke-width:2px,color:#fff
+                    style B fill:#667eea,stroke:#333,stroke-width:2px,color:#fff
+                </div>
+
+                <h4>Example: Three Tasks with Different Priorities</h4>
+                <div class="code-block">void high_priority_task(void *param) {
+    while(1) {
+        ESP_LOGI("HIGH", "Running (Priority 5)");
+        vTaskDelay(pdMS_TO_TICKS(1000));  // Blocks, allows others to run
+    }
+}
+
+void medium_priority_task(void *param) {
+    while(1) {
+        ESP_LOGI("MED", "Running (Priority 3)");
+        vTaskDelay(pdMS_TO_TICKS(500));
+    }
+}
+
+void low_priority_task(void *param) {
+    while(1) {
+        ESP_LOGI("LOW", "Running (Priority 1)");
+        vTaskDelay(pdMS_TO_TICKS(200));
+    }
+}
+
+void app_main() {
+    xTaskCreate(high_priority_task, "high", 2048, NULL, 5, NULL);
+    xTaskCreate(medium_priority_task, "med", 2048, NULL, 3, NULL);
+    xTaskCreate(low_priority_task, "low", 2048, NULL, 1, NULL);
+}</div>
+
+                <h3>TaskHandle_t - Opaque Pointers</h3>
+                <div class="concept-box warning">
+                    <h4>What is TaskHandle_t?</h4>
+                    <p>An <strong>opaque pointer</strong> - you can't see inside, just pass it to FreeRTOS functions.</p>
+                    <div class="code-block">TaskHandle_t task_handle = NULL;
+
+// Create task and store handle
+xTaskCreate(my_task, "task", 2048, NULL, 5, &task_handle);
+//                                             ^--- Stores handle here
+
+// Use handle to control task
+vTaskPrioritySet(task_handle, 10);      // Change priority
+vTaskSuspend(task_handle);              // Pause task
+vTaskResume(task_handle);               // Resume task
+vTaskDelete(task_handle);               // Delete task
+
+// Special: NULL = "self" (current task)
+vTaskPrioritySet(NULL, 3);  // Change MY OWN priority</div>
+                </div>
+
+                <h4>Dynamic Priority Changes</h4>
+                <div class="code-block">void dynamic_task(void *param) {
+    TaskHandle_t handle = (TaskHandle_t)param;
+    
+    while(1) {
+        // Get current priority
+        UBaseType_t priority = uxTaskPriorityGet(NULL);
+        ESP_LOGI("TASK", "Current priority: %d", priority);
+        
+        // Boost priority temporarily
+        vTaskPrioritySet(NULL, 10);
+        // Do important work...
+        
+        // Return to normal
+        vTaskPrioritySet(NULL, 5);
+        
+        vTaskDelay(pdMS_TO_TICKS(1000));
+    }
+}
+
+void app_main() {
+    TaskHandle_t handle;
+    xTaskCreate(dynamic_task, "dyn", 2048, NULL, 5, &handle);
+}</div>
+
+                <div class="key-points">
+                    <h4>Key Takeaways - Day 3</h4>
+                    <ul>
+                        <li>Priority determines which task runs first (0 = lowest, 25 = highest)</li>
+                        <li>Higher priority tasks preempt lower priority tasks instantly</li>
+                        <li><span class="code-inline">TaskHandle_t</span> is opaque pointer for task control</li>
+                        <li><span class="code-inline">NULL</span> handle = "self" in priority functions</li>
+                        <li>Equal priority tasks time-slice (round-robin)</li>
+                        <li>Priority can change at runtime with <span class="code-inline">vTaskPrioritySet()</span></li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Day 4 -->
+            <div class="section" id="day4">
+                <h2>Day 4: Queues - Inter-Task Communication</h2>
+
+                <h3>What is a Queue?</h3>
+                <div class="concept-box info">
+                    <p>A <strong>FIFO buffer</strong> for passing data between tasks. Thread-safe and blocking - perfect for producer-consumer patterns.</p>
+                </div>
+
+                <div class="pattern-box">
+                    <h4>🎯 Design Pattern: Producer-Consumer</h4>
+                    <p><strong>Problem:</strong> One task generates data, another processes it. They run at different rates.</p>
+                    <p><strong>Solution:</strong> Queue decouples them. Producer adds when ready, consumer takes when ready.</p>
+                    <div class="mermaid" style="background: white; padding: 15px; border-radius: 5px; margin-top: 15px;">
+                    graph LR
+                        A[Producer Task] -->|xQueueSend| B[Queue 10 items]
+                        B -->|xQueueReceive| C[Consumer Task]
+                        A -->|Fast: 100ms| A
+                        C -->|Slow: 500ms| C
+                        
+                        style B fill:#ffc107,stroke:#333,stroke-width:2px
+                    </div>
+                </div>
+
+                <h4>Queue Creation & Usage</h4>
+                <div class="code-block">// Create queue: 10 items, each sizeof(int)
+QueueHandle_t queue = xQueueCreate(10, sizeof(int));
+
+// Producer: Send data
+void producer_task(void *param) {
+    int counter = 0;
+    while(1) {
+        counter++;
+        
+        // Send counter value (queue COPIES the data)
+        xQueueSend(queue, &counter, portMAX_DELAY);
+        //                ^--- Address of data to copy
+        //                            ^--- Wait forever if full
+        
+        ESP_LOGI("PRODUCER", "Sent: %d", counter);
+        vTaskDelay(pdMS_TO_TICKS(100));
+    }
+}
+
+// Consumer: Receive data
+void consumer_task(void *param) {
+    int received;
+    while(1) {
+        // Receive data (blocks until available)
+        if (xQueueReceive(queue, &received, portMAX_DELAY) == pdTRUE) {
+            //                    ^--- Address to store received data
+            ESP_LOGI("CONSUMER", "Received: %d", received);
+        }
+        vTaskDelay(pdMS_TO_TICKS(500));
+    }
+}</div>
+
+                <h3>C Concept: Why &data?</h3>
+                <div class="concept-box warning">
+                    <h4>Queues Copy Data</h4>
+                    <p>Queues don't store your variable - they <strong>copy its contents</strong>.</p>
+                    <div class="code-block">int data = 42;
+xQueueSend(queue, &data, portMAX_DELAY);
+//                ^--- "Copy sizeof(int) bytes from this address"
+
+// Queue internally:
+// 1. Reads sizeof(int) bytes from &data
+// 2. Stores copy in queue buffer
+// 3. Your original 'data' variable unchanged
+
+// After send:
+data = 99;  // Doesn't affect what's in queue!
+
+// Receive gets the COPY (42), not your current data (99)
+int received;
+xQueueReceive(queue, &received, portMAX_DELAY);
+// received = 42 (the copy)</div>
+                </div>
+
+                <h3>Sending Structs via Queue</h3>
+                <div class="code-block">typedef struct {
+    uint32_t timestamp;
+    uint8_t sensor_id;
+    float temperature;
+} sensor_data_t;
+
+// Queue holds entire struct
+QueueHandle_t sensor_queue = xQueueCreate(10, sizeof(sensor_data_t));
+
+// Producer
+void sensor_task(void *param) {
+    while(1) {
+        sensor_data_t reading = {
+            .timestamp = xTaskGetTickCount(),
+            .sensor_id = 1,
+            .temperature = 23.5
+        };
+        
+        // Send entire struct (copied)
+        xQueueSend(sensor_queue, &reading, portMAX_DELAY);
+        vTaskDelay(pdMS_TO_TICKS(1000));
+    }
+}
+
+// Consumer
+void logger_task(void *param) {
+    sensor_data_t data;
+    while(1) {
+        if (xQueueReceive(sensor_queue, &data, portMAX_DELAY) == pdTRUE) {
+            ESP_LOGI("LOGGER", "Time: %lu, Sensor: %d, Temp: %.1f",
+                     data.timestamp, data.sensor_id, data.temperature);
+        }
+    }
+}</div>
+
+                <div class="concept-box info">
+                    <h4>Memory Cost of Queuing Structs</h4>
+                    <p>Queue size = <span class="code-inline">queue_length × sizeof(item)</span></p>
+                    <div class="code-block">// Example: sensor_data_t is 12 bytes (4 + 1 + 4 + padding)
+QueueHandle_t q = xQueueCreate(10, sizeof(sensor_data_t));
+// Memory used: 10 × 12 = 120 bytes
+
+// Alternative: Queue pointers (only 4 bytes each)
+QueueHandle_t q = xQueueCreate(10, sizeof(sensor_data_t*));
+// Memory used: 10 × 4 = 40 bytes
+// BUT: Requires malloc/free, more complex</div>
+                </div>
+
+                <div class="key-points">
+                    <h4>Key Takeaways - Day 4</h4>
+                    <ul>
+                        <li>Queues are FIFO, thread-safe, blocking buffers</li>
+                        <li>Producer-Consumer pattern decouples data generation from processing</li>
+                        <li>Queues <strong>copy data</strong> - pass address with <span class="code-inline">&</span></li>
+                        <li><span class="code-inline">sizeof()</span> determines item size at compile time</li>
+                        <li>Blocking timeout: <span class="code-inline">portMAX_DELAY</span> or <span class="code-inline">pdMS_TO_TICKS(ms)</span></li>
+                        <li>Structs can be queued directly - efficient for multiple values</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Day 5 -->
+            <div class="section" id="day5">
+                <h2>Day 5: Semaphores & Mutexes - Synchronization</h2>
+
+                <h3>Binary Semaphore</h3>
+                <div class="concept-box info">
+                    <p>A <strong>signaling mechanism</strong> - one task signals, another waits. Like a flag: 0 (not available) or 1 (available).</p>
+                </div>
+
+                <div class="pattern-box">
+                    <h4>🎯 Design Pattern: ISR Deferral</h4>
+                    <p><strong>Problem:</strong> ISRs must be FAST (microseconds). Heavy work causes system instability.</p>
+                    <p><strong>Solution:</strong> ISR signals semaphore, task does heavy work.</p>
+                    <div class="mermaid" style="background: white; padding: 15px; border-radius: 5px; margin-top: 15px;">
+                    graph LR
+                        A[Button Press] -->|Hardware Interrupt| B[ISR Handler]
+                        B -->|xSemaphoreGiveFromISR| C[Semaphore]
+                        C -->|xSemaphoreTake| D[Task: Heavy Work]
+                        
+                        B -->|1μs| B
+                        D -->|10ms| D
+                        
+                        style B fill:#dc3545,stroke:#333,stroke-width:2px,color:#fff
+                        style D fill:#28a745,stroke:#333,stroke-width:2px,color:#fff
+                    </div>
+                </div>
+
+                <h4>Binary Semaphore Example</h4>
+                <div class="code-block">SemaphoreHandle_t button_semaphore;
+
+// ISR (fast!)
+void IRAM_ATTR button_isr(void *arg) {
+    BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+    
+    // Signal semaphore (only work in ISR!)
+    xSemaphoreGiveFromISR(button_semaphore, &xHigherPriorityTaskWoken);
+    
+    // Wake task if needed
+    if (xHigherPriorityTaskWoken) {
+        portYIELD_FROM_ISR();
+    }
+}
+
+// Task (heavy work)
+void button_task(void *param) {
+    while(1) {
+        // Wait for semaphore (blocks here)
+        if (xSemaphoreTake(button_semaphore, portMAX_DELAY) == pdTRUE) {
+            ESP_LOGI("BUTTON", "Button pressed! Processing...");
+            // Heavy work: logging, LED control, etc.
+            vTaskDelay(pdMS_TO_TICKS(50));  // Debounce
+        }
+    }
+}
+
+void app_main() {
+    button_semaphore = xSemaphoreCreateBinary();
+    xTaskCreate(button_task, "button", 2048, NULL, 5, NULL);
+    // Configure GPIO interrupt...
+}</div>
+
+                <h3>Mutex - Mutual Exclusion</h3>
+                <div class="concept-box warning">
+                    <p>A <strong>mutex</strong> protects shared resources. Only ONE task can hold mutex at a time.</p>
+                </div>
+
+                <div class="pattern-box">
+                    <h4>🎯 Design Pattern: Guard / Resource Protection</h4>
+                    <p><strong>Problem:</strong> Multiple tasks access shared resource (UART, SPI, display) simultaneously → corruption!</p>
+                    <p><strong>Solution:</strong> Mutex ensures exclusive access.</p>
+                    <div class="code-block">xSemaphoreTake(mutex, portMAX_DELAY);
+// === Critical Section ===
+// Only ONE task here at a time
+access_shared_resource();
+// ========================
+xSemaphoreGive(mutex);</div>
+                </div>
+
+                <h4>Race Condition Example</h4>
+                <div class="code-block">// Shared counter (NO PROTECTION)
+int g_counter = 0;
+
+void task1(void *param) {
+    while(1) {
+        g_counter++;  // Read, increment, write
+        vTaskDelay(pdMS_TO_TICKS(10));
+    }
+}
+
+void task2(void *param) {
+    while(1) {
+        g_counter++;  // Read, increment, write
+        vTaskDelay(pdMS_TO_TICKS(10));
+    }
+}
+
+// PROBLEM: Both tasks can interrupt each other mid-operation!
+// Task 1: Read counter = 5
+// Task 2: Read counter = 5  (interrupts Task 1!)
+// Task 1: Write counter = 6
+// Task 2: Write counter = 6  (overwrites Task 1's write!)
+// Result: Counter incremented twice but only went up by 1!</div>
+
+                <h4>Mutex Solution</h4>
+                <div class="code-block">int g_counter = 0;
+SemaphoreHandle_t counter_mutex;
+
+void task1(void *param) {
+    while(1) {
+        xSemaphoreTake(counter_mutex, portMAX_DELAY);
+        g_counter++;  // Protected
+        xSemaphoreGive(counter_mutex);
+        vTaskDelay(pdMS_TO_TICKS(10));
+    }
+}
+
+void task2(void *param) {
+    while(1) {
+        xSemaphoreTake(counter_mutex, portMAX_DELAY);
+        g_counter++;  // Protected
+        xSemaphoreGive(counter_mutex);
+        vTaskDelay(pdMS_TO_TICKS(10));
+    }
+}
+
+void app_main() {
+    counter_mutex = xSemaphoreCreateMutex();
+    xTaskCreate(task1, "t1", 2048, NULL, 5, NULL);
+    xTaskCreate(task2, "t2", 2048, NULL, 5, NULL);
+}</div>
+
+                <h3>UART Mutex - Real-World Example</h3>
+                <div class="concept-box danger">
+                    <h4>Why Protect UART?</h4>
+                    <p>Without mutex, multiple tasks logging simultaneously causes <strong>garbled output</strong>.</p>
+                    <div class="code-block">// WITHOUT MUTEX
+Task A: ESP_LOGI("A", "Hello World");
+Task B: ESP_LOGI("B", "Goodbye");
+
+// Output: "HelGoodlo Wbyeorld" ❌ GARBLED!
+
+// WITH MUTEX
+SemaphoreHandle_t uart_mutex;
+
+void taskA(void *param) {
+    xSemaphoreTake(uart_mutex, portMAX_DELAY);
+    ESP_LOGI("A", "Hello World");
+    xSemaphoreGive(uart_mutex);
+}
+
+void taskB(void *param) {
+    xSemaphoreTake(uart_mutex, portMAX_DELAY);
+    ESP_LOGI("B", "Goodbye");
+    xSemaphoreGive(uart_mutex);
+}
+
+// Output: "Hello World\nGoodbye" ✓ CLEAN!</div>
+                </div>
+
+                <h3>C Concept: volatile Keyword</h3>
+                <div class="concept-box warning">
+                    <h4>When to Use volatile</h4>
+                    <p><strong>volatile</strong> tells compiler: "This variable can change unexpectedly - don't optimize!"</p>
+                    <div class="code-block">// Without volatile - compiler might optimize
+int flag = 0;
+while(flag == 0) {
+    // Compiler: "flag never changes in loop, optimize to while(1)"
+}
+
+// With volatile - compiler always reads from memory
+volatile int flag = 0;
+while(flag == 0) {
+    // Compiler: "Must check flag every iteration"
+}
+
+// When to use:
+// 1. Variables changed by ISRs
+// 2. Variables shared between tasks
+// 3. Hardware registers (memory-mapped I/O)</div>
+                </div>
+
+                <div class="concept-box danger">
+                    <h4>⚠️ volatile Does NOT Prevent Races!</h4>
+                    <p><span class="code-inline">volatile</span> ensures fresh reads, but doesn't make operations atomic. Use mutex for protection!</p>
+                    <div class="code-block">volatile int counter = 0;
+
+// STILL A RACE CONDITION!
+counter++;  // This is THREE operations:
+            // 1. Read counter
+            // 2. Increment
+            // 3. Write back
+            // Another task can interrupt between them!
+
+// FIX: Use mutex
+xSemaphoreTake(mutex, portMAX_DELAY);
+counter++;  // Now atomic (protected)
+xSemaphoreGive(mutex);</div>
+                </div>
+
+                <div class="key-points">
+                    <h4>Key Takeaways - Day 5</h4>
+                    <ul>
+                        <li>Binary semaphore: signaling (0 or 1), perfect for ISR → Task</li>
+                        <li>Mutex: exclusive access to shared resource</li>
+                        <li>ISR Deferral pattern keeps ISRs fast (microseconds)</li>
+                        <li>Use <span class="code-inline">xSemaphoreGiveFromISR()</span> in interrupts</li>
+                        <li>Guard pattern: Take → Work → Give</li>
+                        <li><span class="code-inline">volatile</span> ensures fresh reads, NOT atomicity</li>
+                        <li>UART needs mutex protection to prevent garbled output</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Days 6-7 Practice Project -->
+            <div class="section" id="day6-7">
+                <h2>Days 6-7: Practice Project - Multi-Task LED Controller</h2>
+
+                <h3>Project Overview</h3>
+                <div class="concept-box success">
+                    <p><strong>Goal:</strong> Integrate ALL Week 1 concepts into one functional embedded system.</p>
+                    <p><strong>Hardware:</strong> 4 LEDs, 1 Button, Serial Interface</p>
+                    <p><strong>Concepts Used:</strong> Tasks, Priorities, Queues, Mutexes</p>
+                </div>
+
+                <div class="mermaid">
+                graph TB
+                    A[Button Task P5] -->|Pattern Change| B[Pattern Queue]
+                    C[Serial Task P2] -->|Pattern/Speed Change| B
+                    C -->|Speed Change| D[Speed Queue]
+                    
+                    B --> E[Pattern Sequencer P3]
+                    D --> E
+                    
+                    E -->|Runs Patterns| F[LED Pattern Functions]
+                    
+                    G[Status Reporter P1] -->|Every 5s| H[UART Mutex]
+                    A -->|Logging| H
+                    C -->|Logging| H
+                    E -->|Logging| H
+                    
+                    F --> I[LED Hardware]
+                    
+                    style E fill:#667eea,stroke:#333,stroke-width:3px,color:#fff
+                    style H fill:#ffc107,stroke:#333,stroke-width:2px
+                </div>
+
+                <h3>System Architecture</h3>
+                <div class="code-block">// 4 Tasks with priorities
+Task 1: Pattern Sequencer (Priority 3) - Runs LED patterns
+Task 2: Button Handler     (Priority 5) - Instant response
+Task 3: Serial Parser      (Priority 2) - Command processing
+Task 4: Status Reporter    (Priority 1) - Background logging
+
+// 2 Queues
+Pattern Queue: Holds pattern selection (0-3)
+Speed Queue:   Holds speed in milliseconds (50-1000)
+
+// 1 Mutex
+UART Mutex: Protects ESP_LOGI() calls from garbling
+
+// LED Patterns
+0: Knight Rider - Sweeping left-right
+1: Blink All    - All LEDs blink together
+2: Alternating  - Pairs alternate
+3: Random       - Random LED states</div>
+
+                <h3>Key Implementation Details</h3>
+                
+                <h4>Pattern Functions with Global State</h4>
+                <div class="code-block">uint16_t g_speed_ms = 400;  // Global speed
+volatile uint16_t g_selectedPattern = 0;
+
+int knightRider(void) {
+    static int pos = 0;         // Persistent position
+    static int direction = 1;   // Persistent direction
+    
+    // Update LEDs based on position
+    for (int i = 0; i < 4; i++) {
+        gpio_set_level(LED[i], (i == pos) ? 0 : 1);
+    }
+    
+    pos += direction;
+    if (pos == 3 || pos == 0) {
+        direction = -direction;  // Reverse at ends
+    }
+    
+    vTaskDelay(pdMS_TO_TICKS(g_speed_ms));  // Use global speed
+    return 0;
+}</div>
+
+                <h4>Pattern Sequencer Task</h4>
+                <div class="code-block">void patternSequencer(void *pvParameter) {
+    g_serialHandle *handles = (g_serialHandle *)pvParameter;
+    uint16_t newPattern, newSpeed;
+    
+    while (1) {
+        // Check for speed updates
+        if (xQueueReceive(handles->speedQHandle, &newSpeed, 0) == pdTRUE) {
+            g_speed_ms = newSpeed;
+            xSemaphoreTake(g_uartMutex, portMAX_DELAY);
+            ESP_LOGI("SEQUENCER", "Speed: %d", newSpeed);
+            xSemaphoreGive(g_uartMutex);
+        }
+        
+        // Check for pattern updates
+        if (xQueueReceive(handles->patternQHandle, &newPattern, 0) == pdTRUE) {
+            g_selectedPattern = newPattern;
+            xSemaphoreTake(g_uartMutex, portMAX_DELAY);
+            ESP_LOGI("SEQUENCER", "Pattern: %d", newPattern);
+            xSemaphoreGive(g_uartMutex);
+        }
+        
+        // Run current pattern
+        if (g_selectedPattern == 0) knightRider();
+        else if (g_selectedPattern == 1) blinkAll();
+        else if (g_selectedPattern == 2) alternatingPair();
+        else if (g_selectedPattern == 3) randomPattern();
+    }
+}</div>
+
+                <h4>Status Reporter Task</h4>
+                <div class="code-block">void statusReporter(void *pvParameter) {
+    const char *patternNames[] = {
+        "Knight Rider", "Blink All", "Alternating Pair", "Random"
+    };
+    uint32_t reportCount = 0;
+    
+    while (1) {
+        vTaskDelay(pdMS_TO_TICKS(5000));  // Every 5 seconds
+        
+        xSemaphoreTake(g_uartMutex, portMAX_DELAY);
+        ESP_LOGI("STATUS", "========== Report #%lu ==========", reportCount++);
+        ESP_LOGI("STATUS", "Pattern: %d (%s)", 
+                 g_selectedPattern, patternNames[g_selectedPattern]);
+        ESP_LOGI("STATUS", "Speed: %d ms", g_speed_ms);
+        ESP_LOGI("STATUS", "=====================================");
+        xSemaphoreGive(g_uartMutex);
+    }
+}</div>
+
+                <h3>Design Decisions</h3>
+                <table class="comparison-table">
+                    <thead>
+                        <tr>
+                            <th>Decision</th>
+                            <th>Rationale</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Button Priority = 5</strong></td>
+                            <td>Highest priority for instant response (<50ms requirement)</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Sequencer Priority = 3</strong></td>
+                            <td>Medium priority - runs patterns, can be interrupted by button</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Status Priority = 1</strong></td>
+                            <td>Lowest - background task, not time-critical</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Queue Size = 10</strong></td>
+                            <td>Handles burst button presses without loss</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Global Speed Variable</strong></td>
+                            <td>Shared by all patterns, updated via queue</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Static in Pattern Functions</strong></td>
+                            <td>Maintains state (position, direction) between calls</td>
+                        </tr>
+                        <tr>
+                            <td><strong>UART Mutex</strong></td>
+                            <td>Prevents garbled output from 4 tasks logging simultaneously</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div class="key-points">
+                    <h4>Key Takeaways - Practice Project</h4>
+                    <ul>
+                        <li>Real-world embedded systems integrate multiple concepts</li>
+                        <li>Priority assignment critical for responsiveness requirements</li>
+                        <li>Queues decouple user input from system response</li>
+                        <li>Mutex protection essential for shared hardware (UART)</li>
+                        <li>Global state acceptable when properly synchronized</li>
+                        <li>Static variables maintain function state across calls</li>
+                        <li>Design patterns from Week 1 all applied in one project</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Design Patterns Summary -->
+            <div class="section" id="patterns">
+                <h2>🎯 Design Patterns Summary</h2>
+
+                <div class="pattern-box">
+                    <h4>1. Producer-Consumer (Day 4)</h4>
+                    <p><strong>Use:</strong> Decouples data generation from processing</p>
+                    <p><strong>Components:</strong> Producer task, Queue, Consumer task</p>
+                    <p><strong>Example:</strong> Sensor reading → Data processing pipeline</p>
+                </div>
+
+                <div class="pattern-box">
+                    <h4>2. ISR Deferral / Interrupt Handler (Day 5, Day 8)</h4>
+                    <p><strong>Use:</strong> Keep ISRs fast, defer work to tasks</p>
+                    <p><strong>Components:</strong> ISR (give semaphore), Queue/Semaphore, Task (heavy work)</p>
+                    <p><strong>Example:</strong> Button press → ISR → Semaphore → Task logs/processes</p>
+                </div>
+
+                <div class="pattern-box">
+                    <h4>3. Guard / Mutex Protection (Day 5)</h4>
+                    <p><strong>Use:</strong> Protect shared resources from concurrent access</p>
+                    <p><strong>Components:</strong> Mutex, Critical section (Take → Work → Give)</p>
+                    <p><strong>Example:</strong> Multiple tasks using UART/SPI/I2C</p>
+                </div>
+
+                <div class="pattern-box">
+                    <h4>4. State Machine with Global State (Day 6-7)</h4>
+                    <p><strong>Use:</strong> Manage system states and transitions</p>
+                    <p><strong>Components:</strong> Global state variable, Pattern functions, Queues for events</p>
+                    <p><strong>Example:</strong> LED pattern selection system</p>
+                </div>
+
+                <h3>When to Use Each Pattern</h3>
+                <table class="comparison-table">
+                    <thead>
+                        <tr>
+                            <th>Pattern</th>
+                            <th>Problem Solved</th>
+                            <th>Real-World Usage</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Producer-Consumer</strong></td>
+                            <td>Different processing rates</td>
+                            <td>UART RX → Parser, ADC → Filter, Sensor → Logger</td>
+                        </tr>
+                        <tr>
+                            <td><strong>ISR Deferral</strong></td>
+                            <td>ISR must be fast</td>
+                            <td>GPIO interrupts, Timer callbacks, External events</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Guard/Mutex</strong></td>
+                            <td>Resource contention</td>
+                            <td>Shared UART/I2C/SPI, Display, File system</td>
+                        </tr>
+                        <tr>
+                            <td><strong>State Machine</strong></td>
+                            <td>Complex state logic</td>
+                            <td>Protocols, UI flows, System initialization</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- C Concepts Summary -->
+            <div class="section" id="c-concepts">
+                <h2>📚 C Programming Concepts Mastered</h2>
+
+                <h3>1. Pointers & Memory</h3>
+                <div class="code-block">// Address-of operator
+int x = 42;
+int *ptr = &x;     // ptr holds address of x
+
+// Dereference operator
+*ptr = 99;         // Changes x to 99
+
+// Function pointers
+void my_func(void) { }
+xTaskCreate(&my_func, ...);  // Pass function address
+
+// void* generic pointers
+void *generic = &x;
+int *typed = (int*)generic;  // Cast back to specific type</div>
+
+                <h3>2. Type Casting</h3>
+                <div class="code-block">// Task parameters
+int delay = 500;
+xTaskCreate(task, "name", 2048, (void*)delay, 5, NULL);  // int → void*
+
+void task(void *param) {
+    int my_delay = (int)param;  // void* → int
+}
+
+// Struct pointers
+task_params_t params;
+xTaskCreate(task, "name", 2048, (void*)&params, 5, NULL);  // struct* → void*
+
+void task(void *param) {
+    task_params_t *config = (task_params_t*)param;  // void* → struct*
+}</div>
+
+                <h3>3. Static Keyword</h3>
+                <div class="code-block">// File scope - private to this file
+static const char *TAG = "MODULE";
+
+// Function scope - persistent state
+void my_function() {
+    static int counter = 0;  // Initialized once
+    counter++;               // Retains value between calls
+}</div>
+
+                <h3>4. Volatile Keyword</h3>
+                <div class="code-block">// Prevents compiler optimization
+volatile int flag = 0;  // Changed by ISR or other task
+
+while (flag == 0) {
+    // Compiler must check flag every iteration
+}
+
+// Common uses:
+// - ISR-modified variables
+// - Hardware registers
+// - Task-shared variables</div>
+
+                <h3>5. Structs & Designated Initializers</h3>
+                <div class="code-block">// Define struct type
+typedef struct {
+    int gpio_pin;
+    int delay_ms;
+} config_t;
+
+// Old style (positional)
+config_t conf1 = {2, 500};
+
+// New style (designated initializers - clearer!)
+config_t conf2 = {
+    .gpio_pin = 2,
+    .delay_ms = 500
+};
+
+// Access members
+conf2.gpio_pin;        // Dot operator for structs
+ptr->gpio_pin;         // Arrow operator for pointers to structs</div>
+
+                <h3>6. sizeof() Operator</h3>
+                <div class="code-block">// Compile-time size calculation
+sizeof(int);           // Typically 4 bytes
+sizeof(config_t);      // Size of entire struct (with padding)
+
+// Queue creation
+xQueueCreate(10, sizeof(int));           // Queue of ints
+xQueueCreate(10, sizeof(sensor_data_t)); // Queue of structs</div>
+
+                <div class="key-points">
+                    <h4>C Concepts Hierarchy</h4>
+                    <ul>
+                        <li><strong>Foundation:</strong> Pointers, addresses, dereferencing</li>
+                        <li><strong>Type System:</strong> Casting, void*, opaque pointers</li>
+                        <li><strong>Storage:</strong> static, volatile, const</li>
+                        <li><strong>Data Structures:</strong> structs, arrays, initialization</li>
+                        <li><strong>Memory:</strong> sizeof(), alignment, padding</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Next Steps -->
+            <div class="section">
+                <h2>🚀 Next: Week 2 - Hardware Peripherals</h2>
+                
+                <div class="concept-box info">
+                    <h4>Coming Up</h4>
+                    <ul style="margin-left: 20px; margin-top: 10px;">
+                        <li><strong>Day 8:</strong> GPIO Deep Dive - Interrupts with IRAM_ATTR</li>
+                        <li><strong>Day 9:</strong> Timers - Hardware & Software</li>
+                        <li><strong>Day 10:</strong> UART Communication</li>
+                        <li><strong>Day 11:</strong> I2C Protocol</li>
+                        <li><strong>Day 12:</strong> SPI Protocol</li>
+                        <li><strong>Day 13:</strong> ADC & DAC</li>
+                        <li><strong>Day 14:</strong> Practice Project - Sensor Dashboard</li>
+                    </ul>
+                </div>
+
+                <div class="concept-box success">
+                    <h4>You're Ready For:</h4>
+                    <ul style="margin-left: 20px; margin-top: 10px;">
+                        <li>Direct hardware control with interrupts</li>
+                        <li>Communication protocols (UART, I2C, SPI)</li>
+                        <li>Analog interfacing (ADC/DAC)</li>
+                        <li>Real-time sensor data acquisition</li>
+                        <li>Building complete sensor systems</li>
+                    </ul>
+                </div>
+            </div>
+
+        </div>
+
+        <div class="footer">
+            <p><strong>Week 1 Complete! 🎉</strong></p>
+            <p>Progress: 18% (5/28 days) | FreeRTOS Fundamentals Mastered</p>
+            <p style="margin-top: 10px; font-size: 0.9em;">
+                Continue to Day 8: GPIO Interrupts & ISR Deferral Pattern
+            </p>
+        </div>
+    </div>
+
+    <script>
+        mermaid.initialize({ startOnLoad: true, theme: 'default' });
+    </script>
+</body>
+</html>
