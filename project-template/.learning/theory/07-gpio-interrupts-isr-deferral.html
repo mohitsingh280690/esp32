@@ -1,0 +1,1173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GPIO Interrupts & ISR Deferral Pattern - ESP32 Tutorial</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            padding: 40px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header .subtitle {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+
+        .content {
+            padding: 40px;
+        }
+
+        .section {
+            margin-bottom: 50px;
+        }
+
+        .section-title {
+            font-size: 2em;
+            color: #1e3c72;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 3px solid #667eea;
+        }
+
+        .info-box {
+            background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+            border-left: 5px solid #2196f3;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+
+        .info-box h3 {
+            color: #1565c0;
+            margin-bottom: 10px;
+        }
+
+        .warning-box {
+            background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%);
+            border-left: 5px solid #ff9800;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+
+        .warning-box h3 {
+            color: #e65100;
+            margin-bottom: 10px;
+        }
+
+        .success-box {
+            background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+            border-left: 5px solid #4caf50;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+
+        .success-box h3 {
+            color: #1b5e20;
+            margin-bottom: 10px;
+        }
+
+        .danger-box {
+            background: linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%);
+            border-left: 5px solid #dc3545;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+
+        .danger-box h3 {
+            color: #c62828;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+        }
+
+        .danger-box h3::before {
+            content: "⚠️";
+            margin-right: 10px;
+            font-size: 1.2em;
+        }
+
+        .code-block {
+            background: #2d2d2d;
+            color: #f8f8f2;
+            padding: 20px;
+            border-radius: 5px;
+            font-family: 'Courier New', Consolas, Monaco, monospace;
+            font-size: 14px;
+            line-height: 1.5;
+            overflow-x: auto;
+            margin: 15px 0;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        .code-label {
+            background: #1e3c72;
+            color: white;
+            padding: 8px 15px;
+            border-radius: 5px 5px 0 0;
+            font-weight: bold;
+            display: inline-block;
+            margin-top: 20px;
+        }
+
+        .mermaid-container {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .comparison-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin: 20px 0;
+        }
+
+        .comparison-item {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .comparison-item.bad {
+            border: 2px solid #dc3545;
+        }
+
+        .comparison-item.good {
+            border: 2px solid #4caf50;
+        }
+
+        .comparison-item h4 {
+            margin-bottom: 15px;
+            color: #1e3c72;
+        }
+
+        ul, ol {
+            margin-left: 30px;
+            margin-top: 10px;
+        }
+
+        li {
+            margin: 8px 0;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+
+        table th {
+            background: #667eea;
+            color: white;
+            padding: 12px;
+            text-align: left;
+        }
+
+        table td {
+            padding: 12px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        table tr:hover {
+            background: #f5f5f5;
+        }
+
+        .pattern-box {
+            background: linear-gradient(135deg, #f3e5f5 0%, #e1bee7 100%);
+            border-left: 5px solid #9c27b0;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+
+        .pattern-box h3 {
+            color: #6a1b9a;
+            margin-bottom: 10px;
+        }
+
+        @media (max-width: 768px) {
+            .comparison-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>⚡ GPIO Interrupts & ISR Deferral Pattern</h1>
+            <p class="subtitle">Day 8: Master Hardware Interrupts in Real-Time Embedded Systems</p>
+        </div>
+
+        <div class="content">
+            <!-- What are Interrupts? -->
+            <div class="section">
+                <h2 class="section-title">🎯 What are Hardware Interrupts?</h2>
+
+                <div class="info-box">
+                    <h3>Interrupts: Hardware Events That Demand Immediate Attention</h3>
+                    <p><strong>Think of interrupts like a doorbell:</strong></p>
+                    <ul>
+                        <li>You're busy doing something (running task code)</li>
+                        <li>Doorbell rings (hardware event occurs)</li>
+                        <li>You immediately stop what you're doing (CPU pauses current task)</li>
+                        <li>Answer the door (execute Interrupt Service Routine - ISR)</li>
+                        <li>Return to what you were doing (resume task)</li>
+                    </ul>
+                    
+                    <p style="margin-top: 15px;"><strong>In embedded systems:</strong></p>
+                    <ul>
+                        <li>Button pressed → GPIO interrupt fires</li>
+                        <li>Data arrived on UART → UART interrupt fires</li>
+                        <li>Timer expired → Timer interrupt fires</li>
+                        <li>DMA transfer complete → DMA interrupt fires</li>
+                    </ul>
+                </div>
+
+                <div class="comparison-grid">
+                    <div class="comparison-item bad">
+                        <h4>❌ Polling (Wasteful)</h4>
+                        <div class="code-block">while(1) {
+    if(button_pressed()) {
+        handle_button();
+    }
+    vTaskDelay(10); // Check every 10ms
+}
+
+// Problems:
+// - Wastes CPU checking constantly
+// - 10ms delay = slow response
+// - 1ms delay = still wastes 99% CPU
+// - Miss events between checks</div>
+                    </div>
+                    
+                    <div class="comparison-item good">
+                        <h4>✅ Interrupts (Efficient)</h4>
+                        <div class="code-block">// Task sleeps until signaled
+while(1) {
+    wait_for_interrupt_signal();
+    handle_button();
+}
+
+// ISR (runs on button press):
+void button_isr() {
+    signal_task(); // Wake up task
+}
+
+// Benefits:
+// - Zero CPU when idle
+// - Instant response (microseconds)
+// - Never miss events</div>
+                    </div>
+                </div>
+
+                <div class="mermaid-container">
+                    <div class="mermaid">
+                        sequenceDiagram
+                            participant HW as Hardware Button
+                            participant CPU as CPU
+                            participant ISR as ISR Handler
+                            participant Task as Task
+                            
+                            Note over Task: Running normally
+                            HW->>CPU: GPIO signal changes
+                            CPU->>Task: PAUSE
+                            CPU->>ISR: Execute ISR
+                            Note over ISR: Minimal work
+                            ISR->>CPU: Return
+                            CPU->>Task: RESUME
+                            Note over Task: Process event
+                    </div>
+                </div>
+            </div>
+
+            <!-- ISR Deferral Pattern -->
+            <div class="section">
+                <h2 class="section-title">🏗️ The ISR Deferral Pattern</h2>
+
+                <div class="pattern-box">
+                    <h3>Design Pattern: ISR Deferral / Interrupt Handler</h3>
+                    <p><strong>One of the MOST CRITICAL patterns in professional embedded development!</strong></p>
+                    
+                    <p style="margin-top: 15px;"><strong>The Golden Rule:</strong></p>
+                    <p style="font-size: 1.3em; font-weight: bold; color: #6a1b9a; margin: 15px 0;">
+                        ISRs must be FAST. Defer heavy work to tasks.
+                    </p>
+                </div>
+
+                <div class="danger-box">
+                    <h3>Why ISRs Must Be Fast</h3>
+                    <ol>
+                        <li><strong>Other interrupts are blocked</strong> - Delays affect whole system responsiveness</li>
+                        <li><strong>Limited stack space</strong> - ISR stack is small (often 1KB or less)</li>
+                        <li><strong>FreeRTOS restrictions</strong> - Most RTOS functions can't be called from ISR</li>
+                        <li><strong>Flash cache disabled</strong> - Code must be in RAM (IRAM_ATTR)</li>
+                        <li><strong>No blocking allowed</strong> - Cannot wait, delay, or allocate memory</li>
+                        <li><strong>Watchdog still running</strong> - Long ISR can trigger watchdog reset</li>
+                    </ol>
+                </div>
+
+                <div class="info-box">
+                    <h3>ISR Deferral Pattern Structure</h3>
+                    <div class="mermaid-container">
+                        <div class="mermaid">
+                            graph LR
+                                A[Hardware Event] -->|Triggers| B[ISR Fast]
+                                B -->|Read HW| C[Minimal Data]
+                                B -->|Send| D[Queue]
+                                D -->|Signals| E[Waiting Task]
+                                E -->|Process| F[Heavy Work]
+                                
+                                style A fill:#ff9800,stroke:#e65100
+                                style B fill:#f44336,stroke:#c62828,color:#fff
+                                style D fill:#2196f3,stroke:#1565c0,color:#fff
+                                style E fill:#4caf50,stroke:#2e7d32,color:#fff
+                                style F fill:#9c27b0,stroke:#6a1b9a,color:#fff
+                        </div>
+                    </div>
+                    
+                    <p><strong>Step 1: ISR (Interrupt Service Routine) - FAST</strong></p>
+                    <ul>
+                        <li>Read hardware register if needed</li>
+                        <li>Clear interrupt flag</li>
+                        <li>Send minimal data to queue</li>
+                        <li><strong>Duration: Microseconds</strong></li>
+                    </ul>
+                    
+                    <p style="margin-top: 15px;"><strong>Step 2: Queue - Thread-Safe Communication</strong></p>
+                    <ul>
+                        <li>Bridges ISR context to task context</li>
+                        <li>Buffers multiple events if they arrive quickly</li>
+                        <li>Non-blocking send from ISR</li>
+                    </ul>
+                    
+                    <p style="margin-top: 15px;"><strong>Step 3: Task - HEAVY Processing</strong></p>
+                    <ul>
+                        <li>Receives event from queue (blocking wait)</li>
+                        <li>Performs complex calculations</li>
+                        <li>Logging, printf, ESP_LOGI</li>
+                        <li>Updates data structures</li>
+                        <li>Calls other functions</li>
+                        <li><strong>Duration: Milliseconds OK</strong></li>
+                    </ul>
+                </div>
+
+                <div class="code-label">Example: ISR Deferral Pattern in Action</div>
+                <div class="code-block">// Global queue handle
+QueueHandle_t button_queue;
+
+// ISR - Runs in interrupt context (FAST!)
+void IRAM_ATTR button_isr_handler(void* arg) {
+    static uint32_t press_count = 0;
+    press_count++;
+    
+    BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+    xQueueSendFromISR(button_queue, &press_count, &xHigherPriorityTaskWoken);
+    
+    if(xHigherPriorityTaskWoken) {
+        portYIELD_FROM_ISR(); // Context switch if higher priority task woken
+    }
+    // ISR exits here - total time: ~2-5 microseconds
+}
+
+// Task - Runs in task context (Can be slow)
+void buttonTask(void* pvParameter) {
+    uint32_t press_count;
+    bool led_state = false;
+    
+    while(1) {
+        // Block here waiting for interrupt event
+        if(xQueueReceive(button_queue, &press_count, portMAX_DELAY) == pdTRUE) {
+            // Heavy processing allowed here:
+            led_state = !led_state;
+            gpio_set_level(LED_GPIO, led_state);
+            
+            ESP_LOGI("BUTTON", "Press #%lu - LED %s", 
+                     press_count, led_state ? "ON" : "OFF");
+            
+            vTaskDelay(pdMS_TO_TICKS(50)); // Debounce delay
+        }
+    }
+}</div>
+            </div>
+
+            <!-- IRAM_ATTR Explained -->
+            <div class="section">
+                <h2 class="section-title">🧠 IRAM_ATTR: Why ISRs Need Special Memory</h2>
+
+                <div class="warning-box">
+                    <h3>The Flash Cache Problem</h3>
+                    <p>ESP32 stores your program in external flash memory. For speed, it caches flash contents in RAM.</p>
+                    <p><strong>During an interrupt:</strong></p>
+                    <ul>
+                        <li>Flash cache is <strong>DISABLED</strong> (to maintain consistency)</li>
+                        <li>CPU cannot read code from flash</li>
+                        <li>If your ISR is in flash → <strong>CRASH!</strong></li>
+                    </ul>
+                    
+                    <p style="margin-top: 15px;"><strong>Solution: IRAM_ATTR</strong></p>
+                    <p>Forces the function to be placed in Internal RAM (IRAM), not flash.</p>
+                </div>
+
+                <div class="code-label">Using IRAM_ATTR</div>
+                <div class="code-block">// ❌ WRONG - ISR in flash (will crash)
+void button_isr_handler(void* arg) {
+    // This code is in FLASH!
+}
+
+// ✅ CORRECT - ISR in RAM
+void IRAM_ATTR button_isr_handler(void* arg) {
+    // This code is in IRAM - safe during interrupt
+}</div>
+
+                <div class="info-box">
+                    <h3>What Functions Need IRAM_ATTR?</h3>
+                    <table>
+                        <tr>
+                            <th>Function Type</th>
+                            <th>Needs IRAM_ATTR?</th>
+                        </tr>
+                        <tr>
+                            <td>ISR handlers (registered with gpio_isr_handler_add)</td>
+                            <td style="color: #dc3545; font-weight: bold;">YES - Required!</td>
+                        </tr>
+                        <tr>
+                            <td>Functions called FROM ISR</td>
+                            <td style="color: #dc3545; font-weight: bold;">YES - Required!</td>
+                        </tr>
+                        <tr>
+                            <td>Regular task functions</td>
+                            <td style="color: #4caf50;">No - Can be in flash</td>
+                        </tr>
+                        <tr>
+                            <td>FreeRTOS FromISR functions</td>
+                            <td style="color: #4caf50;">No - Already in IRAM</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Designated Initializers -->
+            <div class="section">
+                <h2 class="section-title">📝 Designated Initializers (C99 Feature)</h2>
+
+                <div class="info-box">
+                    <h3>Modern C: Named Struct Initialization</h3>
+                    <p>Designated initializers let you initialize struct members by name, making code self-documenting.</p>
+                </div>
+
+                <div class="comparison-grid">
+                    <div class="comparison-item bad">
+                        <h4>❌ Old Way: Positional Initialization</h4>
+                        <div class="code-block">gpio_config_t conf;
+conf.pin_bit_mask = (1ULL << 15);
+conf.mode = GPIO_MODE_INPUT;
+conf.pull_up_en = GPIO_PULLUP_DISABLE;
+conf.pull_down_en = GPIO_PULLDOWN_ENABLE;
+conf.intr_type = GPIO_INTR_POSEDGE;
+
+// Or even worse:
+gpio_config_t conf = {
+    (1ULL << 15), 
+    GPIO_MODE_INPUT, 
+    0, 
+    1, 
+    GPIO_INTR_POSEDGE
+}; // What's 0? What's 1?</div>
+                    </div>
+                    
+                    <div class="comparison-item good">
+                        <h4>✅ New Way: Designated Initializers</h4>
+                        <div class="code-block">gpio_config_t conf = {
+    .pin_bit_mask = (1ULL << GPIO_NUM_15),
+    .mode = GPIO_MODE_INPUT,
+    .pull_up_en = GPIO_PULLUP_DISABLE,
+    .pull_down_en = GPIO_PULLDOWN_ENABLE,
+    .intr_type = GPIO_INTR_POSEDGE
+};
+
+// Crystal clear!
+// Self-documenting
+// Order doesn't matter
+// Unspecified fields = 0</div>
+                    </div>
+                </div>
+
+                <div class="success-box">
+                    <h3>Benefits of Designated Initializers</h3>
+                    <ul>
+                        <li>✅ <strong>Readable:</strong> See what each value means</li>
+                        <li>✅ <strong>Safe:</strong> Compiler error if field name wrong</li>
+                        <li>✅ <strong>Flexible:</strong> Can omit fields (default to 0)</li>
+                        <li>✅ <strong>Order-independent:</strong> Write in any order</li>
+                        <li>✅ <strong>Maintainable:</strong> Adding struct fields won't break code</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- FromISR Functions -->
+            <div class="section">
+                <h2 class="section-title">🔄 FreeRTOS FromISR Functions</h2>
+
+                <div class="danger-box">
+                    <h3>Critical Rule: Use FromISR Versions in Interrupts!</h3>
+                    <p>Regular FreeRTOS functions are <strong>NOT SAFE</strong> to call from ISR context.</p>
+                    <p>Always use the <code>FromISR</code> variants:</p>
+                </div>
+
+                <table>
+                    <tr>
+                        <th>Regular Function (Task Context)</th>
+                        <th>ISR-Safe Version (Interrupt Context)</th>
+                    </tr>
+                    <tr>
+                        <td><code>xQueueSend()</code></td>
+                        <td><code>xQueueSendFromISR()</code></td>
+                    </tr>
+                    <tr>
+                        <td><code>xSemaphoreGive()</code></td>
+                        <td><code>xSemaphoreGiveFromISR()</code></td>
+                    </tr>
+                    <tr>
+                        <td><code>xTaskNotifyGive()</code></td>
+                        <td><code>vTaskNotifyGiveFromISR()</code></td>
+                    </tr>
+                    <tr>
+                        <td><code>xEventGroupSetBits()</code></td>
+                        <td><code>xEventGroupSetBitsFromISR()</code></td>
+                    </tr>
+                </table>
+
+                <div class="code-label">xQueueSendFromISR() Explained</div>
+                <div class="code-block">void IRAM_ATTR button_isr_handler(void* arg) {
+    uint32_t event_data = 42;
+    
+    // This variable tracks if a higher-priority task was woken
+    BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+    
+    // Send to queue (non-blocking in ISR)
+    xQueueSendFromISR(
+        button_queue,                    // Queue handle
+        &event_data,                     // Pointer to data to send
+        &xHigherPriorityTaskWoken        // Updated if task woken
+    );
+    
+    // If a higher-priority task was woken, request context switch
+    if(xHigherPriorityTaskWoken) {
+        portYIELD_FROM_ISR(); // Switch to that task immediately after ISR
+    }
+}
+
+// Why xHigherPriorityTaskWoken?
+// - Queue might wake a task that was blocked waiting for data
+// - That task might be higher priority than current running task
+// - We want to switch to it ASAP (not wait until next scheduler tick)
+// - portYIELD_FROM_ISR() requests immediate context switch</div>
+
+                <div class="info-box">
+                    <h3>Key Differences: FromISR vs Regular</h3>
+                    <ul>
+                        <li><strong>No blocking:</strong> FromISR functions never block (return immediately)</li>
+                        <li><strong>Context switch tracking:</strong> Track if higher-priority task woken</li>
+                        <li><strong>Simplified:</strong> No timeout parameter (always immediate)</li>
+                        <li><strong>IRAM-safe:</strong> FromISR functions are in IRAM</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Bit Manipulation -->
+            <div class="section">
+                <h2 class="section-title">🔢 Bit Manipulation: ULL and GPIO Masks</h2>
+
+                <div class="info-box">
+                    <h3>Why (1ULL << GPIO_NUM)?</h3>
+                    <p>ESP32 has up to 40 GPIOs. A bitmask needs 64 bits to represent all of them.</p>
+                </div>
+
+                <div class="code-label">ULL Suffix Explained</div>
+                <div class="code-block">// ULL = Unsigned Long Long (64-bit integer)
+
+// ❌ WRONG: Using regular int (32-bit)
+#define GPIO_NUM 35
+int mask = (1 << GPIO_NUM);  // Shift left 35 positions
+// Problem: 1 is 32-bit int, shifting left 35 positions = OVERFLOW!
+// Undefined behavior
+
+// ✅ CORRECT: Using ULL (64-bit)
+uint64_t mask = (1ULL << GPIO_NUM);  // 1ULL is 64-bit
+// Binary: 0000...0001000000000000000000000000000000 (bit 35 set)
+// Safe for any GPIO number 0-39</div>
+
+                <div class="code-label">Multiple GPIOs in One Bitmask</div>
+                <div class="code-block">// Configure multiple GPIOs at once using bitwise OR
+gpio_config_t conf = {
+    .pin_bit_mask = (1ULL << GPIO_NUM_15) | (1ULL << GPIO_NUM_16) | (1ULL << GPIO_NUM_17),
+    .mode = GPIO_MODE_INPUT,
+    // ...
+};
+
+// Binary representation:
+// GPIO 15: 0000...0000000000000001000000000000000
+// GPIO 16: 0000...0000000000000010000000000000000
+// GPIO 17: 0000...0000000000000100000000000000000
+// OR'd:    0000...0000000000000111000000000000000
+//                              ^^^
+//                           Bits 15,16,17 set</div>
+
+                <div class="warning-box">
+                    <h3>C Integer Suffixes</h3>
+                    <table>
+                        <tr>
+                            <th>Suffix</th>
+                            <th>Type</th>
+                            <th>Size</th>
+                            <th>Example</th>
+                        </tr>
+                        <tr>
+                            <td>(none)</td>
+                            <td>int</td>
+                            <td>32-bit</td>
+                            <td>1, 42, 1000</td>
+                        </tr>
+                        <tr>
+                            <td>U</td>
+                            <td>unsigned int</td>
+                            <td>32-bit</td>
+                            <td>1U, 42U</td>
+                        </tr>
+                        <tr>
+                            <td>L</td>
+                            <td>long</td>
+                            <td>32/64-bit</td>
+                            <td>1L, 42L</td>
+                        </tr>
+                        <tr>
+                            <td>LL</td>
+                            <td>long long</td>
+                            <td>64-bit</td>
+                            <td>1LL, 42LL</td>
+                        </tr>
+                        <tr>
+                            <td>ULL</td>
+                            <td>unsigned long long</td>
+                            <td>64-bit</td>
+                            <td>1ULL, 42ULL</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Debouncing -->
+            <div class="section">
+                <h2 class="section-title">🔘 Button Debouncing</h2>
+
+                <div class="info-box">
+                    <h3>The Bouncing Problem</h3>
+                    <p>Mechanical buttons don't make clean electrical contact. When pressed:</p>
+                    <ul>
+                        <li>Contacts physically bounce (vibrate) for 5-20ms</li>
+                        <li>Creates multiple rapid HIGH-LOW transitions</li>
+                        <li>Microcontroller sees 5-10 "presses" for one physical press</li>
+                    </ul>
+                </div>
+
+                <div class="mermaid-container">
+                    <div class="mermaid">
+                        sequenceDiagram
+                            participant B as Button
+                            participant G as GPIO
+                            participant ISR as ISR
+                            
+                            Note over B: User presses button
+                            B->>G: HIGH
+                            G->>ISR: Interrupt 1
+                            B->>G: LOW (bounce)
+                            B->>G: HIGH (bounce)
+                            G->>ISR: Interrupt 2
+                            B->>G: LOW (bounce)
+                            B->>G: HIGH (bounce)
+                            G->>ISR: Interrupt 3
+                            B->>G: Stable HIGH
+                            
+                            Note over ISR: 3 interrupts from 1 press!
+                    </div>
+                </div>
+
+                <div class="warning-box">
+                    <h3>Software Debouncing Solutions</h3>
+                    
+                    <p><strong>Solution 1: Delay After Event (Simple)</strong></p>
+                    <div class="code-block">void buttonTask(void* pvParameter) {
+    while(1) {
+        xQueueReceive(button_queue, &event, portMAX_DELAY);
+        
+        // Process button
+        toggle_led();
+        
+        // Ignore all events for 50ms
+        vTaskDelay(pdMS_TO_TICKS(50));
+        
+        // Clear any bounces that arrived during delay
+        xQueueReset(button_queue);
+    }
+}</div>
+
+                    <p style="margin-top: 15px;"><strong>Solution 2: Timestamp Checking (Better)</strong></p>
+                    <div class="code-block">void buttonTask(void* pvParameter) {
+    uint32_t last_press_time = 0;
+    const uint32_t debounce_ms = 50;
+    
+    while(1) {
+        xQueueReceive(button_queue, &event, portMAX_DELAY);
+        
+        uint32_t now = xTaskGetTickCount() * portTICK_PERIOD_MS;
+        
+        if((now - last_press_time) > debounce_ms) {
+            // Valid press
+            toggle_led();
+            last_press_time = now;
+        } else {
+            // Bounce - ignore
+        }
+    }
+}</div>
+
+                    <p style="margin-top: 15px;"><strong>Solution 3: Hardware Debouncing</strong></p>
+                    <ul>
+                        <li>RC filter (resistor + capacitor) on button line</li>
+                        <li>Schmitt trigger IC</li>
+                        <li>More reliable but costs hardware</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- GPIO Configuration -->
+            <div class="section">
+                <h2 class="section-title">⚙️ GPIO Configuration Deep Dive</h2>
+
+                <div class="code-label">Complete GPIO Interrupt Configuration</div>
+                <div class="code-block">// Step 1: Configure GPIO with interrupt
+gpio_config_t button_conf = {
+    .pin_bit_mask = (1ULL << BUTTON_GPIO),  // Which pin(s)
+    .mode = GPIO_MODE_INPUT,                 // Input or output
+    .pull_up_en = GPIO_PULLUP_DISABLE,      // Internal pull-up
+    .pull_down_en = GPIO_PULLDOWN_ENABLE,   // Internal pull-down
+    .intr_type = GPIO_INTR_POSEDGE          // Interrupt trigger
+};
+gpio_config(&button_conf);
+
+// Step 2: Install interrupt service (do once globally)
+gpio_install_isr_service(0);  // 0 = default flags
+
+// Step 3: Register ISR handler for specific GPIO
+gpio_isr_handler_add(
+    BUTTON_GPIO,              // GPIO number
+    button_isr_handler,       // ISR function
+    (void*)BUTTON_ID          // Argument passed to ISR
+);</div>
+
+                <div class="info-box">
+                    <h3>GPIO Interrupt Types</h3>
+                    <table>
+                        <tr>
+                            <th>Interrupt Type</th>
+                            <th>Triggers When</th>
+                            <th>Use Case</th>
+                        </tr>
+                        <tr>
+                            <td><code>GPIO_INTR_DISABLE</code></td>
+                            <td>Never</td>
+                            <td>No interrupt</td>
+                        </tr>
+                        <tr>
+                            <td><code>GPIO_INTR_POSEDGE</code></td>
+                            <td>LOW → HIGH transition</td>
+                            <td>Button press (active high)</td>
+                        </tr>
+                        <tr>
+                            <td><code>GPIO_INTR_NEGEDGE</code></td>
+                            <td>HIGH → LOW transition</td>
+                            <td>Button release, or active low</td>
+                        </tr>
+                        <tr>
+                            <td><code>GPIO_INTR_ANYEDGE</code></td>
+                            <td>Any transition</td>
+                            <td>Rotary encoder, frequency measurement</td>
+                        </tr>
+                        <tr>
+                            <td><code>GPIO_INTR_LOW_LEVEL</code></td>
+                            <td>While LOW</td>
+                            <td>Continuous detection</td>
+                        </tr>
+                        <tr>
+                            <td><code>GPIO_INTR_HIGH_LEVEL</code></td>
+                            <td>While HIGH</td>
+                            <td>Continuous detection</td>
+                        </tr>
+                    </table>
+                </div>
+
+                <div class="warning-box">
+                    <h3>Pull-Up vs Pull-Down Resistors</h3>
+                    <p><strong>Why do we need them?</strong> Floating inputs read random values!</p>
+                    
+                    <p style="margin-top: 15px;"><strong>Pull-Down (Button to 3.3V):</strong></p>
+                    <ul>
+                        <li>Resistor connects GPIO to GND</li>
+                        <li>GPIO reads LOW when button not pressed</li>
+                        <li>Button press connects GPIO to 3.3V → HIGH</li>
+                        <li>Use <code>GPIO_INTR_POSEDGE</code> to detect press</li>
+                    </ul>
+                    
+                    <p style="margin-top: 15px;"><strong>Pull-Up (Button to GND):</strong></p>
+                    <ul>
+                        <li>Resistor connects GPIO to 3.3V</li>
+                        <li>GPIO reads HIGH when button not pressed</li>
+                        <li>Button press connects GPIO to GND → LOW</li>
+                        <li>Use <code>GPIO_INTR_NEGEDGE</code> to detect press</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Common Mistakes -->
+            <div class="section">
+                <h2 class="section-title">⚠️ Common Mistakes & How to Avoid Them</h2>
+
+                <div class="danger-box">
+                    <h3>Mistake #1: Forgetting IRAM_ATTR</h3>
+                    <div class="code-block">// ❌ WRONG
+void button_isr_handler(void* arg) {
+    // This will crash randomly!
+}
+
+// ✅ CORRECT
+void IRAM_ATTR button_isr_handler(void* arg) {
+    // Safe in IRAM
+}</div>
+                    <p><strong>Symptom:</strong> Intermittent crashes, "Cache disabled but cached memory region accessed" error</p>
+                </div>
+
+                <div class="danger-box">
+                    <h3>Mistake #2: Heavy Processing in ISR</h3>
+                    <div class="code-block">// ❌ WRONG
+void IRAM_ATTR button_isr_handler(void* arg) {
+    ESP_LOGI("ISR", "Button pressed");  // NEVER LOG IN ISR!
+    vTaskDelay(pdMS_TO_TICKS(100));     // NEVER DELAY IN ISR!
+    complex_calculation();               // NEVER DO THIS!
+}
+
+// ✅ CORRECT
+void IRAM_ATTR button_isr_handler(void* arg) {
+    uint32_t event = 1;
+    BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+    xQueueSendFromISR(queue, &event, &xHigherPriorityTaskWoken);
+    if(xHigherPriorityTaskWoken) portYIELD_FROM_ISR();
+    // Total: ~3 microseconds
+}</div>
+                    <p><strong>Symptom:</strong> System becomes sluggish, other interrupts missed, watchdog resets</p>
+                </div>
+
+                <div class="danger-box">
+                    <h3>Mistake #3: Using Wrong FreeRTOS Function</h3>
+                    <div class="code-block">// ❌ WRONG
+void IRAM_ATTR button_isr_handler(void* arg) {
+    xQueueSend(queue, &data, 0);  // Regular version - NOT ISR-SAFE!
+}
+
+// ✅ CORRECT
+void IRAM_ATTR button_isr_handler(void* arg) {
+    BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+    xQueueSendFromISR(queue, &data, &xHigherPriorityTaskWoken);
+    if(xHigherPriorityTaskWoken) portYIELD_FROM_ISR();
+}</div>
+                    <p><strong>Symptom:</strong> System hangs, assertion failures, queue corruption</p>
+                </div>
+
+                <div class="danger-box">
+                    <h3>Mistake #4: Not Handling Debouncing</h3>
+                    <div class="code-block">// ❌ WRONG
+void buttonTask(void* pvParameter) {
+    while(1) {
+        xQueueReceive(queue, &event, portMAX_DELAY);
+        counter++;  // Will count 5-10 for each physical press!
+    }
+}
+
+// ✅ CORRECT
+void buttonTask(void* pvParameter) {
+    while(1) {
+        xQueueReceive(queue, &event, portMAX_DELAY);
+        counter++;
+        vTaskDelay(pdMS_TO_TICKS(50));  // Debounce
+        xQueueReset(queue);             // Clear bounces
+    }
+}</div>
+                </div>
+
+                <div class="danger-box">
+                    <h3>Mistake #5: Wrong Bit Width for GPIO Mask</h3>
+                    <div class="code-block">// ❌ WRONG - Overflow for GPIO > 31
+gpio_config_t conf = {
+    .pin_bit_mask = (1 << GPIO_NUM_35),  // 32-bit overflow!
+    // ...
+};
+
+// ✅ CORRECT - 64-bit for all GPIOs
+gpio_config_t conf = {
+    .pin_bit_mask = (1ULL << GPIO_NUM_35),  // Safe
+    // ...
+};</div>
+                </div>
+            </div>
+
+            <!-- Critical Thinking -->
+            <div class="section">
+                <h2 class="section-title">🤔 Critical Thinking Questions</h2>
+
+                <div class="info-box">
+                    <h3>Q1: Why can't you use ESP_LOGI() inside the ISR?</h3>
+                    <p><strong>Answer:</strong></p>
+                    <ul>
+                        <li>Logging internally uses <code>printf()</code></li>
+                        <li><code>printf()</code> allocates memory from heap</li>
+                        <li>Memory allocation uses mutexes (can block)</li>
+                        <li>ISRs cannot block or wait</li>
+                        <li>String formatting is slow (milliseconds)</li>
+                        <li>UART transmission is slow</li>
+                        <li>Would make ISR 1000x slower than it should be!</li>
+                    </ul>
+                </div>
+
+                <div class="info-box">
+                    <h3>Q2: What happens if you forget IRAM_ATTR on your ISR?</h3>
+                    <p><strong>Answer:</strong></p>
+                    <ul>
+                        <li>ISR code remains in external flash memory</li>
+                        <li>When interrupt fires, CPU tries to execute from flash</li>
+                        <li>But flash cache is disabled during interrupts!</li>
+                        <li>CPU gets "Cache disabled but cached memory region accessed" error</li>
+                        <li>System crashes or reboots</li>
+                        <li>Might work sometimes (if code happens to be cached)</li>
+                        <li>Unreliable, intermittent failures - worst kind of bug!</li>
+                    </ul>
+                </div>
+
+                <div class="info-box">
+                    <h3>Q3: Why use a queue instead of a global flag variable?</h3>
+                    <p><strong>Answer:</strong></p>
+                    <ul>
+                        <li><strong>Lost events:</strong> Flag can only hold one state. Multiple quick presses lost.</li>
+                        <li><strong>Race conditions:</strong> ISR sets flag, task clears it - timing issues possible.</li>
+                        <li><strong>No queuing:</strong> Can't buffer events that arrive faster than task processes.</li>
+                        <li><strong>Thread safety:</strong> Queue is designed for ISR→Task communication, flags aren't.</li>
+                        <li><strong>Blocking wait:</strong> Task can efficiently wait on queue (zero CPU), flags require polling.</li>
+                    </ul>
+                    
+                    <div class="code-block">// ❌ Global flag approach (loses events):
+volatile bool button_pressed = false;  // Only holds 1 event
+
+ISR: button_pressed = true;  // Press 1
+ISR: button_pressed = true;  // Press 2 (overwrites!)
+ISR: button_pressed = true;  // Press 3 (overwrites!)
+Task reads once: button_pressed = false;  // 2 presses LOST!
+
+// ✅ Queue approach (no losses):
+ISR: xQueueSend(queue, 1);  // Press 1 queued
+ISR: xQueueSend(queue, 2);  // Press 2 queued
+ISR: xQueueSend(queue, 3);  // Press 3 queued
+Task: Receive all 3 events in order</div>
+                </div>
+
+                <div class="info-box">
+                    <h3>Q4: How would you handle 3 different buttons using one ISR?</h3>
+                    <p><strong>Answer:</strong></p>
+                    <div class="code-block">// Pass button ID as ISR argument
+#define BUTTON1_ID 1
+#define BUTTON2_ID 2
+#define BUTTON3_ID 3
+
+void IRAM_ATTR button_isr_handler(void* arg) {
+    uint32_t button_id = (uint32_t)arg;  // Retrieve which button
+    BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+    xQueueSendFromISR(queue, &button_id, &xHigherPriorityTaskWoken);
+    if(xHigherPriorityTaskWoken) portYIELD_FROM_ISR();
+}
+
+// Register same ISR for all buttons, different args:
+gpio_isr_handler_add(GPIO_NUM_15, button_isr_handler, (void*)BUTTON1_ID);
+gpio_isr_handler_add(GPIO_NUM_16, button_isr_handler, (void*)BUTTON2_ID);
+gpio_isr_handler_add(GPIO_NUM_17, button_isr_handler, (void*)BUTTON3_ID);
+
+// Task receives button ID and handles accordingly:
+void buttonTask(void* pvParameter) {
+    uint32_t button_id;
+    while(1) {
+        xQueueReceive(queue, &button_id, portMAX_DELAY);
+        switch(button_id) {
+            case BUTTON1_ID: handle_button1(); break;
+            case BUTTON2_ID: handle_button2(); break;
+            case BUTTON3_ID: handle_button3(); break;
+        }
+    }
+}</div>
+                </div>
+
+                <div class="info-box">
+                    <h3>Q5: What's the tradeoff between interrupt-driven and polling?</h3>
+                    <p><strong>Answer:</strong></p>
+                    
+                    <p><strong>Interrupts (Event-Driven):</strong></p>
+                    <ul>
+                        <li>✅ Zero CPU when idle - power efficient</li>
+                        <li>✅ Instant response (microseconds)</li>
+                        <li>✅ Never miss events</li>
+                        <li>❌ More complex code</li>
+                        <li>❌ ISR restrictions (IRAM, no blocking, etc.)</li>
+                        <li>❌ Harder to debug</li>
+                    </ul>
+                    
+                    <p><strong>Polling (Query Periodically):</strong></p>
+                    <ul>
+                        <li>✅ Simple code - just check in loop</li>
+                        <li>✅ Easy to debug</li>
+                        <li>✅ No ISR restrictions</li>
+                        <li>❌ Wastes CPU (checking constantly or frequently)</li>
+                        <li>❌ Slower response (depends on poll rate)</li>
+                        <li>❌ Can miss short events between polls</li>
+                    </ul>
+                    
+                    <p><strong>When to use each:</strong></p>
+                    <ul>
+                        <li><strong>Interrupts:</strong> Critical timing, low-power, fast events, high-frequency signals</li>
+                        <li><strong>Polling:</strong> Learning/prototyping, slow sensors, when simplicity matters more than efficiency</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Best Practices -->
+            <div class="section">
+                <h2 class="section-title">✅ Best Practices Summary</h2>
+
+                <div class="success-box">
+                    <h3>ISR Golden Rules</h3>
+                    <ol>
+                        <li><strong>ALWAYS</strong> use IRAM_ATTR on ISR functions</li>
+                        <li><strong>ALWAYS</strong> keep ISRs fast (< 10 microseconds ideal)</li>
+                        <li><strong>ALWAYS</strong> use FromISR variants of FreeRTOS functions</li>
+                        <li><strong>NEVER</strong> log, print, or allocate memory in ISR</li>
+                        <li><strong>NEVER</strong> call blocking functions (delays, mutexes, etc.)</li>
+                        <li><strong>NEVER</strong> do complex calculations in ISR</li>
+                        <li><strong>DEFER</strong> all heavy work to tasks via queues</li>
+                    </ol>
+                </div>
+
+                <div class="success-box">
+                    <h3>GPIO Configuration Checklist</h3>
+                    <ul>
+                        <li>✅ Use designated initializers for clarity</li>
+                        <li>✅ Use ULL suffix for GPIO masks (64-bit)</li>
+                        <li>✅ Configure pull-up/pull-down to avoid floating inputs</li>
+                        <li>✅ Choose correct interrupt type (POSEDGE vs NEGEDGE)</li>
+                        <li>✅ Call <code>gpio_install_isr_service()</code> once before adding handlers</li>
+                        <li>✅ Check return values of all GPIO functions</li>
+                    </ul>
+                </div>
+
+                <div class="success-box">
+                    <h3>Debouncing Strategies</h3>
+                    <ul>
+                        <li>✅ Software: Add 50ms delay after event in task</li>
+                        <li>✅ Software: Check timestamp of last press before processing</li>
+                        <li>✅ Hardware: RC filter on button line</li>
+                        <li>✅ Clear queue after debounce delay to remove bounces</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Real-World Applications -->
+            <div class="section">
+                <h2 class="section-title">🌍 Real-World Applications</h2>
+
+                <div class="info-box">
+                    <h3>Where ISR Deferral Pattern is Used</h3>
+                    <ul>
+                        <li><strong>Industrial Controllers:</strong> Emergency stop buttons must respond instantly</li>
+                        <li><strong>Automotive:</strong> ABS braking systems, airbag triggers</li>
+                        <li><strong>Medical Devices:</strong> Patient monitoring alarms</li>
+                        <li><strong>Networking:</strong> Ethernet packet arrival interrupts</li>
+                        <li><strong>Audio Systems:</strong> DMA buffer completion for continuous playback</li>
+                        <li><strong>Robotics:</strong> Encoder interrupts for precise position tracking</li>
+                        <li><strong>Smart Homes:</strong> Motion sensors, door contacts</li>
+                    </ul>
+                </div>
+
+                <div class="pattern-box">
+                    <h3>Professional Embedded Systems Pattern</h3>
+                    <p>ISR Deferral is not just a tutorial exercise - it's how professional embedded firmware is structured!</p>
+                    <p>Understanding this pattern is essential for:</p>
+                    <ul>
+                        <li>Writing responsive real-time systems</li>
+                        <li>Maintaining system stability under load</li>
+                        <li>Efficient power management</li>
+                        <li>Meeting hard real-time deadlines</li>
+                        <li>Professional embedded job interviews</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        mermaid.initialize({ 
+            startOnLoad: true,
+            theme: 'default',
+            securityLevel: 'loose',
+            flowchart: {
+                useMaxWidth: true,
+                htmlLabels: true,
+                curve: 'basis'
+            }
+        });
+    </script>
+</body>
+</html>

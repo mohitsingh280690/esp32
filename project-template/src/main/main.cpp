@@ -18,7 +18,7 @@
  * - LED on GPIO 2 (or any available GPIO)
  * 
  * REQUIREMENTS:
- * ✅ Configure button GPIO as input with interrupt on rising edge
+ * ✅ Configure button GPIO as input with interrupt on rising edge (i'll be doing on falling edge)
  * ✅ Register ISR handler with IRAM_ATTR attribute
  * ✅ ISR should send event to queue (use xQueueSendFromISR)
  * ✅ Task receives from queue and toggles LED
